@@ -1,78 +1,92 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, Dumbbell, Apple, BookOpen, User } from 'lucide-react-native';
-import { StyleSheet } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/Colors';
 
-export default function TabLayout() {
+type TabIconProps = {
+  color: string;
+  size: number;
+  focused: boolean;
+};
+
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabBarLabel,
-        headerShown: false,
-      }}>
+        tabBarStyle: {
+          backgroundColor: COLORS.background,
+          borderTopColor: 'transparent',
+        },
+      }}
+    >
+      {/* HOME */}
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Home size={size} color={color} />
+          tabBarIcon: ({ color, size }: TabIconProps) => (
+            <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
+
+      {/* WORKOUT PLAN */}
       <Tabs.Screen
         name="exercise-plan"
         options={{
-          title: 'Exercise Plan',
-          tabBarIcon: ({ color, size }) => (
-            <Dumbbell size={size} color={color} />
+          title: 'Workout',
+          tabBarIcon: ({ color, size }: TabIconProps) => (
+            <MaterialCommunityIcons
+              name="dumbbell"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
+
+      {/* MEAL PLAN */}
       <Tabs.Screen
         name="meal-plan"
         options={{
-          title: 'Meal Plan',
-          tabBarIcon: ({ color, size }) => (
-            <Apple size={size} color={color} />
+          title: 'Meals',
+          tabBarIcon: ({ color, size }: TabIconProps) => (
+            <Ionicons name="restaurant" size={size} color={color} />
           ),
         }}
       />
+
+      {/* LIBRARY */}
       <Tabs.Screen
         name="library"
         options={{
           title: 'Library',
-          tabBarIcon: ({ color, size }) => (
-            <BookOpen size={size} color={color} />
+          tabBarIcon: ({ color, size }: TabIconProps) => (
+            <Ionicons name="book" size={size} color={color} />
           ),
         }}
       />
+
+      {/* PROFILE */}
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <User size={size} color={color} />
+          tabBarIcon: ({ color, size }: TabIconProps) => (
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />
+
+            {/* HIDDEN: Food logging flow screens (not in tab bar) */}
+{/* HIDDEN: Food logging flow screens (not in tab bar) */}
+<Tabs.Screen name="food-scan" options={{ href: null }} />
+<Tabs.Screen name="food-search" options={{ href: null }} />
+<Tabs.Screen name="food-confirm" options={{ href: null }} />
+
+
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.05)',
-    height: 64,
-    paddingBottom: 8,
-    paddingTop: 8,
-  },
-  tabBarLabel: {
-    fontFamily: 'System',
-    fontSize: 12,
-  },
-});

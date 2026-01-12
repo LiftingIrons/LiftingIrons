@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // ✅ Replace these with your real Supabase project details:
-const supabaseUrl = 'https://zfbjptlmwbvbtucazrzi.supabase.co'
-const supabaseAnonKey = 'sb_publishable_afvGo6Yoc7bKgg1TZ4SrdA_LRfvmPxw'
+const supabaseUrl = 'https://zfbjptlmwbvbtucazrzi.supabase.co';
+const supabaseAnonKey = 'sb_publishable_afvGo6Yoc7bKgg1TZ4SrdA_LRfvmPxw';
 
 // ✅ Initialize Supabase client
 if (!supabaseUrl) {
@@ -41,6 +41,7 @@ export interface FitnessGoals {
   equipment_access: string[]
   workout_frequency: number
   preferred_workout_duration: number
+  experience_level?: 'beginner' | 'intermediate' | 'advanced'
   created_at: string
   updated_at: string
 }
@@ -74,6 +75,7 @@ export interface MealPlan {
   is_completed: boolean
   ai_generated: boolean
   created_at: string
+  week_start?: string
 }
 
 export interface UserProgress {
@@ -89,52 +91,144 @@ export interface UserProgress {
 }
 
 // -----------------------------
-// API functions
+// Helper: get JWT (access token)
 // -----------------------------
-export const generateWorkoutPlan = async (userId: string, preferences?: any) => {
-  const response = await fetch(`${supabaseUrl}/functions/v1/generate-workout-plan`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${supabaseAnonKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      userId,
-      preferences,
-    }),
-  })
+async function getAccessToken() {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+  if (sessionError) throw sessionError
 
-  if (!response.ok) {
-    throw new Error('Failed to generate workout plan')
-  }
+  const accessToken = sessionData.session?.access_token
+  if (!accessToken) throw new Error('No active session. Please log in again.')
 
-  return response.json()
+  return accessToken
 }
 
-export const generateMealPlan = async (userId: string, preferences?: any) => {
-  const response = await fetch(`${supabaseUrl}/functions/v1/generate-meal-plan`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${supabaseAnonKey}`,
-      'Content-Type': 'application/json',
+// -----------------------------
+// Helper: fetch with timeout (prevents infinite spinner)
+// -----------------------------
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = 60_000
+) {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    return res
+  } catch (err: any) {
+    // AbortController throws a DOMException in many runtimes
+    if (err?.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs}ms`)
+    }
+    throw err
+  } finally {
+    clearTimeout(id)
+  }
+}
+
+// -----------------------------
+// API functions
+// -----------------------------
+export const generateWorkoutPlan = async (preferences?: any) => {
+  const accessToken = await getAccessToken()
+
+  const response = await fetchWithTimeout(
+    `${supabaseUrl}/functions/v1/generate-workout-plan`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`, // ✅ user JWT (secure)
+        apikey: supabaseAnonKey,                // ✅ ok to include (some setups require it)
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        // ✅ do NOT send userId; function should read it from JWT
+        preferences,
+      }),
     },
-    body: JSON.stringify({
-      userId,
-      preferences,
-    }),
-  })
+    90_000 // workouts can take longer
+  )
+
+  const text = await response.text()
 
   if (!response.ok) {
-    throw new Error('Failed to generate meal plan')
+    console.error('generate-workout-plan failed:', response.status, text)
+    throw new Error(`Workout plan failed (${response.status}): ${text}`)
   }
 
-  return response.json()
+  return JSON.parse(text)
+}
+
+export const generateMealPlan = async (preferences?: any) => {
+  const accessToken = await getAccessToken()
+
+  // ✅ this is what your meal-plan.tsx passes
+  const date = preferences?.date
+
+  const response = await fetchWithTimeout(
+    `${supabaseUrl}/functions/v1/generate-meal-plan`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`, // ✅ real user JWT
+        apikey: supabaseAnonKey,                // ✅ ok to include
+        'Content-Type': 'application/json',
+      },
+      // ✅ send date top-level so function saves correct day
+      body: JSON.stringify({ date, preferences }),
+    },
+    90_000 // meals can also take a while
+  )
+
+  const text = await response.text()
+
+  if (!response.ok) {
+    console.error('generate-meal-plan failed:', response.status, text)
+    throw new Error(`Meal plan failed (${response.status}): ${text}`)
+  }
+
+  return JSON.parse(text)
+}
+
+// ✅ NEW: Generate a full week (Sunday–Saturday) in one request
+export const generateMealWeek = async (preferences?: any) => {
+  const accessToken = await getAccessToken()
+
+  const date = preferences?.date
+
+  const response = await fetchWithTimeout(
+    `${supabaseUrl}/functions/v1/generate-meal-week`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: supabaseAnonKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ date, preferences }),
+    },
+    120_000 // week can take longer
+  )
+
+  const text = await response.text()
+
+  if (!response.ok) {
+    console.error('generate-meal-week failed:', response.status, text)
+    throw new Error(`Meal week failed (${response.status}): ${text}`)
+  }
+
+  return JSON.parse(text)
 }
 
 export const saveUserProfile = async (profile: Partial<UserProfile>) => {
   const { data, error } = await supabase
     .from('user_profiles')
-    .upsert(profile)
+    .upsert(profile, { onConflict: 'user_id' })
     .select()
     .single()
 
@@ -145,7 +239,7 @@ export const saveUserProfile = async (profile: Partial<UserProfile>) => {
 export const saveUserGoals = async (goals: Partial<FitnessGoals>) => {
   const { data, error } = await supabase
     .from('fitness_goals')
-    .upsert(goals)
+    .upsert(goals, { onConflict: 'user_id' })
     .select()
     .single()
 

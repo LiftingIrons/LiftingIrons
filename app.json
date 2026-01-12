@@ -1,40 +1,38 @@
 {
   "expo": {
-    "name": "bolt-expo-nativewind",
+    "name": "LiftingIrons",
     "slug": "lifting-irons-fitness",
     "version": "1.0.0",
     "runtimeVersion": "1.0.0",
+    "jsEngine": "jsc",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/ICON.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
-    "privacy": "public",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ],
+    "platforms": ["ios", "android", "web"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.liftingirons.fitnessapp",
-      "buildNumber": "1",
+      "buildNumber": "339",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses camera for progress photos",
-        "NSPhotoLibraryUsageDescription": "This app accesses photo library for progress tracking"
+        "NSCameraUsageDescription": "We use the camera to scan food barcodes and take progress photos.",
+        "NSPhotoLibraryUsageDescription": "This app accesses photo library for progress tracking",
+        "NSMotionUsageDescription": "We use motion data to count your steps.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.liftingirons.fitnessapp",
       "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/images/ICON.png",
         "backgroundColor": "#3B82F6"
       },
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACTIVITY_RECOGNITION"
       ]
     },
     "web": {
@@ -51,11 +49,10 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.png",
+          "image": "./assets/images/ICON.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

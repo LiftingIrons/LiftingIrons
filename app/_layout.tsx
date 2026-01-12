@@ -1,64 +1,39 @@
-import { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { View, Text, StyleSheet } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { UserProvider } from '@/context/UserContext';
+import { useEffect } from 'react';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { UserProvider, useUser } from '@/context/UserContext';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  useFrameworkReady();
-  const [isReady, setIsReady] = useState(false);
+function AppContent() {
+  const { user, isLoading } = useUser();
+  const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
-    async function prepare() {
-      try {
-        // Simulate any async loading
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (e) {
-        console.warn(e);
-      } finally {
-        setIsReady(true);
-        SplashScreen.hideAsync();
-      }
+    if (isLoading) return;
+
+    const group = segments[0]; 
+    const inAuth = segments[0] === '(auth)';
+    const inTabs = segments[0] === '(tabs)';
+    const inOnboarding = group === '(onboarding)'
+
+    if (!user && !inAuth) {
+      router.replace('/(auth)/sign-up');
+      return;
     }
 
-    prepare();
-  }, []);
+    if (user && !(inTabs || inOnboarding)) {
+      router.replace('/(tabs)/home');
+    }
+  }, [user, isLoading, segments]);
 
-  if (!isReady) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading Fitness App...</Text>
-      </View>
-    );
-  }
+  if (isLoading) return null; // wait for user session
 
+  return <Slot />;
+}
+
+export default function RootLayout() {
   return (
     <UserProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-      </Stack>
-      <StatusBar style="auto" />
+      <AppContent />
     </UserProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#111827',
-    fontWeight: '500',
-  },
-});

@@ -1357,7 +1357,6 @@ const additionalBulkMeals: Meal[] = [
     { number: 3, instruction: 'Drizzle with honey before serving' }
   ]
 },
-[
   {
     id: 'bulk-chicken-rice-veggies',
     title: 'Grilled Chicken with Rice and Vegetables',
@@ -1619,7 +1618,6 @@ const additionalBulkMeals: Meal[] = [
       { number: 4, instruction: 'Serve steak with potatoes and green beans' }
     ]
   }
-]
 ];
 
 // Cut meals for weight loss
@@ -1652,7 +1650,7 @@ const cutMeals: Meal[] = [
   },
 {
   id: 'eggwhite-omelet-spinach-mushrooms',
-  title: 'https://res.cloudinary.com/dksanwxgl/image/upload/v1761677031/Firefly_A_meal_of_Egg_White_Omelet_with_Spinach_and_Mushrooms_394769_xvzdna.jpg',
+  title: 'Eggwhite omelet Spinach Mushrooms',
   prepTime: '10 min',
   servings: 1,
   calories: 210,
@@ -1661,7 +1659,7 @@ const cutMeals: Meal[] = [
   fat: 8,
   category: 'breakfast',
   tags: ['high-protein', 'cut'],
-  imageUrl: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
+  imageUrl: 'https://res.cloudinary.com/dksanwxgl/image/upload/v1761677031/Firefly_A_meal_of_Egg_White_Omelet_with_Spinach_and_Mushrooms_394769_xvzdna.jpg',
   ingredients: [
     { name: 'Egg whites', amount: '6', unit: 'large' },
     { name: 'Spinach', amount: '1', unit: 'cup' },
@@ -2852,7 +2850,6 @@ export const meals: Meal[] = [
     id: 'healthy-banana-muffins',
     title: 'Healthy Banana Muffins',
     prepTime: '15 min',
-    cookTime: '25 min',
     servings: 6,
     calories: 206,
     protein: 4.5,

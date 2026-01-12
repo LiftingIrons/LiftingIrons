@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   ScrollView,
   SafeAreaView,
   Platform,
   Modal,
-  Image
+  Image,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Dumbbell, Apple, Pill, ChevronDown, X as Close, Target } from 'lucide-react-native';
-import Header from '@/components/Header';
 import Card from '@/components/Card';
 import ExerciseCard from '@/components/ExerciseCard';
 import MealCard from '@/components/MealCard';
@@ -23,37 +22,32 @@ import { exerciseLibrary, meals } from '@/data/mockData';
 import WebSafeTouchableOpacity from '@/components/WebSafeTouchableOpacity';
 
 // Exercise Detail Modal Component
-function ExerciseDetailModal({ exercise, visible, onClose }: { exercise: any, visible: boolean, onClose: () => void }) {
+function ExerciseDetailModal({
+  exercise,
+  visible,
+  onClose,
+}: {
+  exercise: any;
+  visible: boolean;
+  onClose: () => void;
+}) {
   if (!visible) return null;
 
-  const getDifficultyColor = () => {
-    switch (exercise.difficulty?.toLowerCase()) {
-      case 'beginner':
-        return COLORS.success;
-      case 'intermediate':
-        return COLORS.warning;
-      case 'advanced':
-        return COLORS.error;
-      default:
-        return COLORS.primary;
-    }
-  };
-
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <View style={modalStyles.modalContainer}>
         <SafeAreaView style={modalStyles.modalContent}>
           <View style={modalStyles.modalHeader}>
-            <Text style={TYPOGRAPHY.headingMedium}>{exercise.name}</Text>
-            <WebSafeTouchableOpacity
-              onPress={onClose}
-              style={modalStyles.closeButton}
+            {/* ✅ FIX: constrain long titles so X never gets pushed off-screen */}
+            <Text
+              style={[TYPOGRAPHY.headingMedium, modalStyles.modalTitle]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
             >
+              {exercise.name}
+            </Text>
+
+            <WebSafeTouchableOpacity onPress={onClose} style={modalStyles.closeButton}>
               <Close size={24} color={COLORS.text} />
             </WebSafeTouchableOpacity>
           </View>
@@ -61,13 +55,14 @@ function ExerciseDetailModal({ exercise, visible, onClose }: { exercise: any, vi
           <ScrollView showsVerticalScrollIndicator={false}>
             <Image source={{ uri: exercise.imageUrl }} style={modalStyles.modalImage} />
 
-            <View style={modalStyles.section}>
+            <View style={modalStyles.sectionCard}>
+              <View style={modalStyles.cardAccent} />
               <View style={modalStyles.sectionHeader}>
                 <Target size={20} color={COLORS.primary} />
                 <Text style={modalStyles.sectionTitle}>Target Muscles</Text>
               </View>
               <View style={modalStyles.muscles}>
-                {exercise.muscles?.map((muscle, index) => (
+                {exercise.muscles?.map((muscle: string, index: number) => (
                   <View key={index} style={modalStyles.muscleBadge}>
                     <Text style={modalStyles.muscleText}>{muscle}</Text>
                   </View>
@@ -75,9 +70,10 @@ function ExerciseDetailModal({ exercise, visible, onClose }: { exercise: any, vi
               </View>
             </View>
 
-            <View style={modalStyles.section}>
+            <View style={modalStyles.sectionCard}>
+              <View style={modalStyles.cardAccent} />
               <Text style={modalStyles.sectionTitle}>Instructions</Text>
-              {exercise.instructions?.map((instruction, index) => (
+              {exercise.instructions?.map((instruction: string, index: number) => (
                 <View key={index} style={modalStyles.instructionStep}>
                   <View style={modalStyles.stepNumber}>
                     <Text style={modalStyles.stepNumberText}>{index + 1}</Text>
@@ -87,18 +83,20 @@ function ExerciseDetailModal({ exercise, visible, onClose }: { exercise: any, vi
               )) || null}
             </View>
 
-            <View style={modalStyles.section}>
+            <View style={modalStyles.sectionCard}>
+              <View style={modalStyles.cardAccent} />
               <Text style={modalStyles.sectionTitle}>Pro Tips</Text>
-              {exercise.tips?.map((tip, index) => (
+              {exercise.tips?.map((tip: string, index: number) => (
                 <View key={index} style={modalStyles.tipItem}>
                   <Text style={modalStyles.tipText}>• {tip}</Text>
                 </View>
               )) || null}
             </View>
 
-            <View style={[modalStyles.section, modalStyles.lastSection]}>
+            <View style={[modalStyles.sectionCard, modalStyles.lastSection]}>
+              <View style={modalStyles.cardAccent} />
               <Text style={modalStyles.sectionTitle}>Variations</Text>
-              {exercise.variations?.map((variation, index) => (
+              {exercise.variations?.map((variation: string, index: number) => (
                 <View key={index} style={modalStyles.variationItem}>
                   <Text style={modalStyles.variationText}>• {variation}</Text>
                 </View>
@@ -137,14 +135,6 @@ const supplements = [
     description: 'Slow-digesting protein ideal for overnight muscle recovery.',
     benefits: ['Muscle preservation', 'Sustained protein release', 'Supports recovery'],
     dosage: '20-40g before bed',
-  },
-  {
-    id: 'creatine_monohydrate',
-    name: 'Creatine Monohydrate',
-    category: 'Muscle Growth & Strength',
-    description: 'Increases muscle strength and power output during high-intensity exercise.',
-    benefits: ['Increased strength', 'Better performance', 'Muscle growth support'],
-    dosage: '5g daily',
   },
   {
     id: 'creatine_hcl',
@@ -201,14 +191,6 @@ const supplements = [
     description: 'Metabolite of leucine that helps reduce muscle breakdown and support growth.',
     benefits: ['Reduce muscle breakdown', 'Support lean mass', 'Enhance recovery'],
     dosage: '3g daily',
-  },
-  {
-    id: 'protein',
-    name: 'Whey Protein',
-    category: 'Protein',
-    description: 'Fast-absorbing protein ideal for post-workout recovery.',
-    benefits: ['Muscle recovery', 'Protein synthesis', 'Convenient nutrition'],
-    dosage: '25-30g post-workout',
   },
   {
     id: 'vitamin-d',
@@ -500,6 +482,14 @@ const supplements = [
   },
 ];
 
+function niceDateLabel() {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 export default function LibraryScreen() {
   const params = useLocalSearchParams();
   const [activeSection, setActiveSection] = useState<LibrarySection>('exercises');
@@ -517,14 +507,14 @@ export default function LibraryScreen() {
     if (params.section) {
       setActiveSection(params.section as LibrarySection);
     }
-    
+
     // If navigating to a specific exercise, scroll to it or highlight it
     if (params.exerciseName) {
       // Find and auto-open the specific exercise
-      const exercise = exerciseLibrary.exercises.find(ex => 
-        ex.name.toLowerCase() === String(params.exerciseName).toLowerCase()
+      const exercise = exerciseLibrary.exercises.find(
+        (ex) => ex.name.toLowerCase() === String(params.exerciseName).toLowerCase()
       );
-      
+
       if (exercise) {
         // Small delay to ensure the library has rendered
         setTimeout(() => {
@@ -534,10 +524,9 @@ export default function LibraryScreen() {
       }
     }
   }, [params]);
+
   const toggleFavorite = (id: string) => {
-    setFavorites(prev => 
-      prev.includes(id) ? prev.filter(fav => fav !== id) : [...prev, id]
-    );
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((fav) => fav !== id) : [...prev, id]));
   };
 
   const sections = [
@@ -620,8 +609,8 @@ export default function LibraryScreen() {
     if (selectedBodyPart === 'all') {
       return exerciseLibrary.exercises;
     }
-    
-    return exerciseLibrary.exercises.filter(exercise => {
+
+    return exerciseLibrary.exercises.filter((exercise) => {
       // Handle main category filters
       switch (selectedBodyPart) {
         case 'chest':
@@ -638,29 +627,53 @@ export default function LibraryScreen() {
           return exercise.category && exercise.category.toLowerCase() === 'core';
         case 'cardio':
           return exercise.category && exercise.category.toLowerCase() === 'cardio';
-        
+
         // Handle chest subcategories
         case 'upper-chest':
-          return exercise.category && exercise.category.toLowerCase() === 'chest' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase() === 'upper';
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'chest' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase() === 'upper'
+          );
         case 'middle-chest':
-          return exercise.category && exercise.category.toLowerCase() === 'chest' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase() === 'middle';
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'chest' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase() === 'middle'
+          );
         case 'lower-chest':
-          return exercise.category && exercise.category.toLowerCase() === 'chest' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase() === 'lower';
-        
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'chest' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase() === 'lower'
+          );
+
         // Handle shoulder subcategories
         case 'front-deltoids':
-          return exercise.category && exercise.category.toLowerCase() === 'shoulders' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase() === 'front';
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'shoulders' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase() === 'front'
+          );
         case 'side-deltoids':
-          return exercise.category && exercise.category.toLowerCase() === 'shoulders' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase() === 'side';
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'shoulders' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase() === 'side'
+          );
         case 'rear-deltoids':
-          return exercise.category && exercise.category.toLowerCase() === 'shoulders' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase() === 'rear';
-        
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'shoulders' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase() === 'rear'
+          );
+
         // Handle other specific filters
         case 'biceps':
           return exercise.subCategory && exercise.subCategory.toLowerCase().includes('bicep');
@@ -668,31 +681,60 @@ export default function LibraryScreen() {
           return exercise.subCategory && exercise.subCategory.toLowerCase().includes('tricep');
         case 'forearm':
           return exercise.subCategory && exercise.subCategory.toLowerCase().includes('forearm');
-          
+
         case 'quadriceps':
-          return exercise.category && exercise.category.toLowerCase() === 'legs' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase().includes('quadricep');
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'legs' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase().includes('quadricep')
+          );
         case 'hamstrings':
-          return exercise.category && exercise.category.toLowerCase() === 'legs' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase().includes('hamstring');
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'legs' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase().includes('hamstring')
+          );
         case 'glutes':
-          return exercise.category && exercise.category.toLowerCase() === 'legs' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase().includes('glute');
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'legs' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase().includes('glute')
+          );
         case 'calves':
-          return exercise.category && exercise.category.toLowerCase() === 'legs' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase().includes('calve');
-        
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'legs' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase().includes('calve')
+          );
+
         // Handle abs subcategories
         case 'abs':
-          return exercise.category && exercise.category.toLowerCase() === 'core' && 
-                 exercise.subCategory && (exercise.subCategory.toLowerCase() === 'abs' || exercise.subCategory.toLowerCase() === 'lower abs');
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'core' &&
+            exercise.subCategory &&
+            (exercise.subCategory.toLowerCase() === 'abs' ||
+              exercise.subCategory.toLowerCase() === 'lower abs')
+          );
         case 'obliques':
-          return exercise.category && exercise.category.toLowerCase() === 'core' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase() === 'obliques';
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'core' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase() === 'obliques'
+          );
         case 'lower-abs':
-          return exercise.category && exercise.category.toLowerCase() === 'core' && 
-                 exercise.subCategory && exercise.subCategory.toLowerCase() === 'lower abs';
-        
+          return (
+            exercise.category &&
+            exercise.category.toLowerCase() === 'core' &&
+            exercise.subCategory &&
+            exercise.subCategory.toLowerCase() === 'lower abs'
+          );
+
         default:
           return false;
       }
@@ -701,20 +743,21 @@ export default function LibraryScreen() {
 
   const filterMeals = () => {
     let filteredMeals = meals;
-    
+
     if (!meals || meals.length === 0) {
       return [];
     }
-    
+
     if (selectedMealType !== 'all') {
-      filteredMeals = filteredMeals.filter(meal => 
-        meal.title?.toLowerCase().includes(selectedMealType) ||
-        meal.category?.toLowerCase() === selectedMealType
+      filteredMeals = filteredMeals.filter(
+        (meal) =>
+          meal.title?.toLowerCase().includes(selectedMealType) ||
+          meal.category?.toLowerCase() === selectedMealType
       );
     }
-    
+
     if (selectedDietary !== 'all') {
-      filteredMeals = filteredMeals.filter(meal => {
+      filteredMeals = filteredMeals.filter((meal) => {
         switch (selectedDietary) {
           case 'low-calorie':
             return meal.calories < 400;
@@ -730,14 +773,14 @@ export default function LibraryScreen() {
         }
       });
     }
-    
+
     if (selectedBulkCut !== 'all') {
-      filteredMeals = filteredMeals.filter(meal => {
+      filteredMeals = filteredMeals.filter((meal) => {
         // Check if meal has tags and if the selected tag is included
         return meal.tags && Array.isArray(meal.tags) && meal.tags.includes(selectedBulkCut);
       });
     }
-    
+
     return filteredMeals;
   };
 
@@ -745,17 +788,17 @@ export default function LibraryScreen() {
     if (selectedSupplementCategory === 'all') {
       return supplements;
     }
-    
-    return supplements.filter(supplement => {
-      const categoryMap = {
+
+    return supplements.filter((supplement) => {
+      const categoryMap: any = {
         'muscle-growth': 'Muscle Growth & Strength',
-        'energy-performance': 'Energy & Performance', 
+        'energy-performance': 'Energy & Performance',
         'recovery-repair': 'Recovery & Repair',
         'fat-loss': 'Fat Loss & Metabolism Support',
         'joint-health': 'Joint, Bone & Tissue Health',
-        'micronutrients': 'Everyday Essentials / Micronutrients'
+        micronutrients: 'Everyday Essentials / Micronutrients',
       };
-      
+
       const targetCategory = categoryMap[selectedSupplementCategory];
       return targetCategory ? supplement.category === targetCategory : true;
     });
@@ -780,20 +823,16 @@ export default function LibraryScreen() {
   const renderExercises = () => (
     <View style={styles.sectionContent}>
       {filterExercises().map((exercise, index) => (
-        <ExerciseCard 
-          key={`${exercise.id}-${index}`} 
-          exercise={exercise}
-          onPress={() => setShowExerciseModal(exercise)}
+        <ExerciseCard
+          key={`${exercise.id}-${index}`}
+          exercise={{ ...exercise, variations: exercise.variations ?? [] }}
+          onPress={() => setShowExerciseModal({ ...exercise, variations: exercise.variations ?? [] })}
         />
       ))}
-      
+
       {/* Exercise Detail Modal */}
       {showExerciseModal && (
-        <ExerciseDetailModal 
-          exercise={showExerciseModal}
-          visible={true}
-          onClose={() => setShowExerciseModal(null)}
-        />
+        <ExerciseDetailModal exercise={showExerciseModal} visible={true} onClose={() => setShowExerciseModal(null)} />
       )}
     </View>
   );
@@ -818,7 +857,7 @@ export default function LibraryScreen() {
             calories: meal.calories,
             protein: meal.protein,
             carbs: meal.carbs,
-            fat: meal.fat
+            fat: meal.fat,
           }}
           isFavorite={favorites.includes(meal.id)}
           onToggleFavorite={toggleFavorite}
@@ -831,13 +870,14 @@ export default function LibraryScreen() {
   const renderSupplements = () => (
     <View style={styles.sectionContent}>
       {filterSupplements().map((supplement) => (
-        <Card key={supplement.id} style={styles.supplementCard}>
+        <View key={supplement.id} style={styles.homeCard}>
+          <View style={styles.cardAccent} />
           <Text style={TYPOGRAPHY.headingSmall}>{supplement.name}</Text>
           <Text style={styles.supplementCategory}>{supplement.category}</Text>
           <Text style={styles.supplementDescription} numberOfLines={2}>
             {supplement.description}
           </Text>
-          
+
           <View style={styles.supplementBenefits}>
             {supplement.benefits.slice(0, 2).map((benefit, index) => (
               <View key={index} style={styles.benefitTag}>
@@ -845,73 +885,84 @@ export default function LibraryScreen() {
               </View>
             ))}
           </View>
-          
-          <Text style={styles.supplementDosage}>
-            Dosage: {supplement.dosage}
-          </Text>
-        </Card>
+
+          <Text style={styles.supplementDosage}>Dosage: {supplement.dosage}</Text>
+        </View>
       ))}
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header 
-        title="Library"
-        subtitle="Explore exercises, meals & supplements 📚"
-      />
-      
-      {/* Section Tabs */}
-      <View style={styles.sectionTabs}>
-        {sections.map((section) => (
-          <WebSafeTouchableOpacity
-            key={section.id}
-            style={[
-              styles.sectionTab,
-              activeSection === section.id && styles.activeSectionTab
-            ]}
-            onPress={() => setActiveSection(section.id)}
-          >
-            <section.icon 
-              size={20} 
-              color={activeSection === section.id ? COLORS.white : COLORS.textSecondary} 
-            />
-            <Text style={[
-              styles.sectionTabText,
-              activeSection === section.id && styles.activeSectionTabText
-            ]}>
-              {section.label}
+      {/* Home-style banner header */}
+      <View style={styles.bannerWrap}>
+        <View style={styles.banner}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.brand}>LiftingIrons</Text>
+            <Text style={styles.hello}>Library 📚</Text>
+            <Text style={styles.date}>{niceDateLabel()}</Text>
+          </View>
+          <View style={styles.streakPill}>
+            <Text style={styles.streakEmoji}>📚</Text>
+            <Text style={styles.streakValue}>
+              {activeSection === 'exercises' ? 'EXERCISES' : activeSection === 'meals' ? 'MEALS' : 'SUPPS'}
             </Text>
-          </WebSafeTouchableOpacity>
-        ))}
+            <Text style={styles.streakSmall}>browse</Text>
+          </View>
+        </View>
       </View>
+
+      {/* Section Tabs (Home-style chips) */}
+      <View style={styles.tabsWrap}>
+        <View style={styles.tabsCard}>
+          <View style={styles.cardAccent} />
+          <View style={styles.sectionTabs}>
+            {sections.map((section) => (
+              <WebSafeTouchableOpacity
+                key={section.id}
+                style={[styles.sectionTab, activeSection === section.id && styles.activeSectionTab]}
+                onPress={() => setActiveSection(section.id)}
+              >
+                <section.icon
+                  size={18}
+                  color={activeSection === section.id ? COLORS.white : COLORS.textSecondary}
+                />
+                <Text style={[styles.sectionTabText, activeSection === section.id && styles.activeSectionTabText]}>
+                  {section.label}
+                </Text>
+              </WebSafeTouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
       {/* Filter Button */}
       {(activeSection === 'exercises' || activeSection === 'meals' || activeSection === 'supplements') && (
-        <View style={styles.filterContainer}>
-          <WebSafeTouchableOpacity
-            style={styles.filterButton}
-            onPress={openFilterModal}
-          >
-            <Text style={styles.filterButtonText}>
-              {activeSection === 'exercises' ? 'Filter by Body Part' : 
-               activeSection === 'meals' ? 'Filter Meals' : 'Filter Supplements'}
-            </Text>
-            <ChevronDown size={16} color={COLORS.primary} />
-          </WebSafeTouchableOpacity>
-          
-            <WebSafeTouchableOpacity
-              style={styles.resetButton}
-              onPress={resetFilters}
-            >
-              <Text style={styles.resetButtonText}>Reset</Text>
-            </WebSafeTouchableOpacity>
+        <View style={styles.filterWrap}>
+          <View style={styles.filterCard}>
+            <View style={styles.cardAccent} />
+
+            <View style={styles.filterRow}>
+              <WebSafeTouchableOpacity style={styles.filterButton} onPress={openFilterModal}>
+                <Text style={styles.filterButtonText}>
+                  {activeSection === 'exercises'
+                    ? 'Filter by Body Part'
+                    : activeSection === 'meals'
+                      ? 'Filter Meals'
+                      : 'Filter Supplements'}
+                </Text>
+                <ChevronDown size={16} color={COLORS.primary} />
+              </WebSafeTouchableOpacity>
+
+              <WebSafeTouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+                <Text style={styles.resetButtonText}>Reset</Text>
+              </WebSafeTouchableOpacity>
+            </View>
+          </View>
         </View>
       )}
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {activeSection === 'exercises' && renderExercises()}
         {activeSection === 'meals' && renderMeals()}
         {activeSection === 'supplements' && renderSupplements()}
@@ -927,14 +978,20 @@ export default function LibraryScreen() {
         <View style={styles.modalContainer}>
           <SafeAreaView style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={TYPOGRAPHY.headingMedium}>
-                {activeSection === 'exercises' ? 'Filter Exercises' : 
-                 activeSection === 'meals' ? 'Filter Meals' : 'Filter Supplements'}
-              </Text>
-              <WebSafeTouchableOpacity
-                onPress={() => setShowFilterModal(false)}
-                style={styles.closeButton}
+              {/* ✅ FIX: constrain long titles so X never gets pushed off-screen */}
+              <Text
+                style={[TYPOGRAPHY.headingMedium, styles.modalTitle]}
+                numberOfLines={2}
+                ellipsizeMode="tail"
               >
+                {activeSection === 'exercises'
+                  ? 'Filter Exercises'
+                  : activeSection === 'meals'
+                    ? 'Filter Meals'
+                    : 'Filter Supplements'}
+              </Text>
+
+              <WebSafeTouchableOpacity onPress={() => setShowFilterModal(false)} style={styles.closeButton}>
                 <Close size={24} color={COLORS.text} />
               </WebSafeTouchableOpacity>
             </View>
@@ -948,14 +1005,16 @@ export default function LibraryScreen() {
                       key={bodyPart.id}
                       style={[
                         styles.filterOption,
-                        selectedBodyPart === bodyPart.id && styles.selectedFilterOption
+                        selectedBodyPart === bodyPart.id && styles.selectedFilterOption,
                       ]}
                       onPress={() => setSelectedBodyPart(bodyPart.id)}
                     >
-                      <Text style={[
-                        styles.filterOptionText,
-                        selectedBodyPart === bodyPart.id && styles.selectedFilterText
-                      ]}>
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          selectedBodyPart === bodyPart.id && styles.selectedFilterText,
+                        ]}
+                      >
                         {bodyPart.label}
                       </Text>
                     </WebSafeTouchableOpacity>
@@ -973,14 +1032,16 @@ export default function LibraryScreen() {
                           key={option.id}
                           style={[
                             styles.bulkCutButton,
-                            selectedBulkCut === option.id && styles.selectedBulkCutButton
+                            selectedBulkCut === option.id && styles.selectedBulkCutButton,
                           ]}
                           onPress={() => setSelectedBulkCut(option.id)}
                         >
-                          <Text style={[
-                            styles.bulkCutButtonText,
-                            selectedBulkCut === option.id && styles.selectedBulkCutText
-                          ]}>
+                          <Text
+                            style={[
+                              styles.bulkCutButtonText,
+                              selectedBulkCut === option.id && styles.selectedBulkCutText,
+                            ]}
+                          >
                             {option.label}
                           </Text>
                         </WebSafeTouchableOpacity>
@@ -995,14 +1056,16 @@ export default function LibraryScreen() {
                         key={mealType.id}
                         style={[
                           styles.filterOption,
-                          selectedMealType === mealType.id && styles.selectedFilterOption
+                          selectedMealType === mealType.id && styles.selectedFilterOption,
                         ]}
                         onPress={() => setSelectedMealType(mealType.id)}
                       >
-                        <Text style={[
-                          styles.filterOptionText,
-                          selectedMealType === mealType.id && styles.selectedFilterText
-                        ]}>
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            selectedMealType === mealType.id && styles.selectedFilterText,
+                          ]}
+                        >
                           {mealType.label}
                         </Text>
                       </WebSafeTouchableOpacity>
@@ -1016,14 +1079,16 @@ export default function LibraryScreen() {
                         key={dietary.id}
                         style={[
                           styles.filterOption,
-                          selectedDietary === dietary.id && styles.selectedFilterOption
+                          selectedDietary === dietary.id && styles.selectedFilterOption,
                         ]}
                         onPress={() => setSelectedDietary(dietary.id)}
                       >
-                        <Text style={[
-                          styles.filterOptionText,
-                          selectedDietary === dietary.id && styles.selectedFilterText
-                        ]}>
+                        <Text
+                          style={[
+                            styles.filterOptionText,
+                            selectedDietary === dietary.id && styles.selectedFilterText,
+                          ]}
+                        >
                           {dietary.label}
                         </Text>
                       </WebSafeTouchableOpacity>
@@ -1040,14 +1105,16 @@ export default function LibraryScreen() {
                       key={category.id}
                       style={[
                         styles.filterOption,
-                        selectedSupplementCategory === category.id && styles.selectedFilterOption
+                        selectedSupplementCategory === category.id && styles.selectedFilterOption,
                       ]}
                       onPress={() => setSelectedSupplementCategory(category.id)}
                     >
-                      <Text style={[
-                        styles.filterOptionText,
-                        selectedSupplementCategory === category.id && styles.selectedFilterText
-                      ]}>
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          selectedSupplementCategory === category.id && styles.selectedFilterText,
+                        ]}
+                      >
                         {category.label}
                       </Text>
                     </WebSafeTouchableOpacity>
@@ -1084,27 +1151,127 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+
+  // Home-style banner
+  bannerWrap: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.sm,
+  },
+  banner: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 24,
+    padding: SPACING.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  brand: {
+    ...TYPOGRAPHY.headingLarge,
+    color: 'white',
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  hello: {
+    ...TYPOGRAPHY.headingMedium,
+    color: 'white',
+    marginTop: 6,
+  },
+  date: {
+    ...TYPOGRAPHY.bodySmall,
+    color: 'rgba(255,255,255,0.92)',
+    marginTop: 6,
+  },
+  streakPill: {
+    width: 92,
+    borderRadius: 18,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakEmoji: { color: 'white', fontSize: 16, marginBottom: 2 },
+  streakValue: { color: 'white', fontSize: 12, fontWeight: '900' },
+  streakSmall: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 },
+
+  // Home-style card wrappers for tabs/filter
+  tabsWrap: {
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+  },
+  filterWrap: {
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+  },
+  tabsCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 22,
+    padding: SPACING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    overflow: 'hidden',
+  },
+  filterCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 22,
+    padding: SPACING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    overflow: 'hidden',
+  },
+  homeCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 22,
+    padding: SPACING.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    overflow: 'hidden',
+    marginBottom: SPACING.md,
+  },
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+    backgroundColor: COLORS.primaryLight,
+    opacity: 0.9,
+  },
+
+  // Tabs (chip style)
   sectionTabs: {
     flexDirection: 'row',
-    backgroundColor: COLORS.white,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    gap: SPACING.sm,
   },
   sectionTab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.sm,
+    paddingVertical: 10,
     paddingHorizontal: SPACING.md,
     backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.full,
-    marginHorizontal: SPACING.xs,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   activeSectionTab: {
     backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   sectionTabText: {
     ...TYPOGRAPHY.labelMedium,
@@ -1114,15 +1281,50 @@ const styles = StyleSheet.create({
   activeSectionTabText: {
     color: COLORS.white,
   },
+
   content: {
     paddingBottom: SPACING.xxxl,
   },
   sectionContent: {
     padding: SPACING.md,
   },
-  supplementCard: {
-    marginBottom: SPACING.md,
+
+  // Filter row
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
+  filterButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.background,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterButtonText: {
+    ...TYPOGRAPHY.bodyMedium,
+    color: COLORS.text,
+  },
+  resetButton: {
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: 'transparent',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  resetButtonText: {
+    ...TYPOGRAPHY.labelMedium,
+    color: COLORS.error,
+  },
+
+  // Supplements (inside homeCard)
   supplementCategory: {
     ...TYPOGRAPHY.bodySmall,
     color: COLORS.primary,
@@ -1143,7 +1345,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight + '20',
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 999,
   },
   benefitText: {
     ...TYPOGRAPHY.labelSmall,
@@ -1155,42 +1357,8 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
     fontWeight: '500',
   },
-  filterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  filterButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.white,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  filterButtonText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.text,
-  },
-  resetButton: {
-    marginLeft: SPACING.sm,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.error + '20',
-    borderRadius: BORDER_RADIUS.md,
-  },
-  resetButtonText: {
-    ...TYPOGRAPHY.labelMedium,
-    color: COLORS.error,
-  },
+
+  // Modal
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1209,9 +1377,18 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    gap: SPACING.sm, // ✅ tiny improvement so things don’t collide
   },
+
+  // ✅ NEW: title can shrink + wrap instead of pushing the X off-screen
+  modalTitle: {
+    flex: 1,
+    minWidth: 0,
+  },
+
   closeButton: {
     padding: SPACING.sm,
+    flexShrink: 0, // ✅ keeps X visible
   },
   modalScroll: {
     flex: 1,
@@ -1303,18 +1480,48 @@ const modalStyles = StyleSheet.create({
     padding: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    gap: SPACING.sm, // ✅ tiny improvement so things don’t collide
   },
+
+  // ✅ NEW: title can shrink + wrap instead of pushing the X off-screen
+  modalTitle: {
+    flex: 1,
+    minWidth: 0,
+  },
+
   closeButton: {
     padding: SPACING.sm,
+    flexShrink: 0, // ✅ keeps X visible
   },
   modalImage: {
     width: '100%',
     height: 250,
   },
-  section: {
-    padding: SPACING.md,
-    backgroundColor: COLORS.white,
+
+  // Home-style card for sections inside the modal
+  sectionCard: {
+    backgroundColor: COLORS.card,
     marginTop: SPACING.md,
+    marginHorizontal: SPACING.md,
+    borderRadius: 22,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+    backgroundColor: COLORS.primaryLight,
+    opacity: 0.9,
   },
   lastSection: {
     marginBottom: SPACING.md,
@@ -1337,7 +1544,7 @@ const modalStyles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight + '20',
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 999,
   },
   muscleText: {
     ...TYPOGRAPHY.labelSmall,

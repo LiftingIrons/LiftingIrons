@@ -1,159 +1,108 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import Button from '@/components/Button';
-import { COLORS } from '@/constants/Colors';
-import { SPACING, BORDER_RADIUS } from '@/constants/Spacing';
-import { TYPOGRAPHY } from '@/constants/Typography';
-import { useUser } from '@/context/UserContext';
+import { supabase } from '@/lib/supabase';
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { setUser } = useUser();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [errors, setErrors] = useState({});
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.name) newErrors.name = 'Name is required';
-    if (!formData.email) newErrors.email = 'Email is required';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const handleSignUp = async () => {
+    setError('');
+    setLoading(true);
 
-  const handleSignUp = () => {
-    if (validateForm()) {
-      setUser({
-        name: formData.name,
-        email: formData.email
-      });
-      router.push('/dimensions');
+    try {
+      // 1️⃣ Sign up
+      const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+      if (signUpError) throw signUpError;
+
+      // 2️⃣ Sign in immediately
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+
+      const authUser = signInData.user;
+      if (!authUser) throw new Error('No authenticated session');
+
+      // 3️⃣ Create user profile
+      await supabase.from('user_profiles').insert([
+        {
+          user_id: authUser.id,
+          name: '',
+          age: null,
+          height: null,
+          weight: null,
+          gender: null,
+          activity_level: null,
+        },
+      ]);
+
+      // 4️⃣ Redirect to onboarding
+      router.replace('/(onboarding)/goals');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>
-          Let's get started on your fitness journey
-        </Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Create an Account</Text>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
-              placeholder="Enter your full name"
-            />
-            {errors.name && <Text style={styles.error}>{errors.name}</Text>}
-          </View>
+      <View style={{ marginVertical: 12 }}>
+        <Text>Email</Text>
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          placeholder="you@example.com"
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+      </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {errors.email && <Text style={styles.error}>{errors.email}</Text>}
-          </View>
+      <View style={{ marginVertical: 12 }}>
+        <Text>Password</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          secureTextEntry
+        />
+      </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.password}
-              onChangeText={(text) => setFormData({ ...formData, password: text })}
-              placeholder="Create a password"
-              secureTextEntry
-            />
-            {errors.password && <Text style={styles.error}>{errors.password}</Text>}
-          </View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.confirmPassword}
-              onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-              placeholder="Confirm your password"
-              secureTextEntry
-            />
-            {errors.confirmPassword && (
-              <Text style={styles.error}>{errors.confirmPassword}</Text>
-            )}
-          </View>
+      <TouchableOpacity
+        style={[styles.button, loading && { opacity: 0.6 }]}
+        onPress={handleSignUp}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>{loading ? 'Signing up...' : 'Sign Up'}</Text>
+      </TouchableOpacity>
 
-          <Button
-            title="Continue"
-            onPress={handleSignUp}
-            variant="primary"
-            size="large"
-            fullWidth
-            style={styles.button}
-          />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <View style={styles.bottomContainer}>
+        <Text style={styles.text}>Already have an account? </Text>
+        <TouchableOpacity onPress={() => router.replace('/(auth)/sign-in')}>
+          <Text style={styles.linkText}>Log in</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  content: {
-    padding: SPACING.lg,
-  },
-  title: {
-    ...TYPOGRAPHY.displayMedium,
-    marginBottom: SPACING.sm,
-  },
-  subtitle: {
-    ...TYPOGRAPHY.bodyLarge,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xl,
-  },
-  form: {
-    gap: SPACING.md,
-  },
-  inputGroup: {
-    marginBottom: SPACING.md,
-  },
-  label: {
-    ...TYPOGRAPHY.labelMedium,
-    marginBottom: SPACING.xs,
-  },
-  input: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    ...TYPOGRAPHY.bodyMedium,
-  },
-  error: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.error,
-    marginTop: SPACING.xs,
-  },
-  button: {
-    marginTop: SPACING.md,
-  },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 24, backgroundColor: '#F9FAFB' },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 24, textAlign: 'center' },
+  input: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, marginTop: 4 },
+  button: { backgroundColor: '#3B82F6', padding: 16, borderRadius: 8, marginTop: 24 },
+  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '600', fontSize: 16 },
+  error: { color: 'red', marginTop: 8, textAlign: 'center' },
+  bottomContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32 },
+  text: { fontSize: 14, color: '#555' },
+  linkText: { fontSize: 14, color: '#3B82F6', fontWeight: 'bold' },
 });

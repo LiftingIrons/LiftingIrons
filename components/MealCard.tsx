@@ -95,7 +95,16 @@ export default function MealCard({
         <View style={styles.modalContainer}>
           <SafeAreaView style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={TYPOGRAPHY.headingMedium}>{title}</Text>
+              {/* ✅ FIX: Title can wrap/ellipsis and never push the X off-screen */}
+              <Text
+                style={[TYPOGRAPHY.headingMedium, styles.modalTitle]}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {title}
+              </Text>
+
+              {/* ✅ FIX: X is anchored to the right */}
               <WebSafeTouchableOpacity
                 onPress={() => setShowModal(false)}
                 style={styles.closeButton}
@@ -204,8 +213,8 @@ export default function MealCard({
 
   return (
     <>
-      <Card 
-        onPress={() => setShowModal(true)} 
+      <Card
+        onPress={() => setShowModal(true)}
         style={styles.card}
       >
         <View style={styles.content}>
@@ -215,12 +224,12 @@ export default function MealCard({
               style={styles.image}
               resizeMode="cover"
             />
-            <WebSafeTouchableOpacity 
+            <WebSafeTouchableOpacity
               style={styles.favoriteButton}
               onPress={handleFavoritePress}
             >
-              <Heart 
-                size={24} 
+              <Heart
+                size={24}
                 color={COLORS.white}
                 fill={isFavorite ? COLORS.white : 'none'}
               />
@@ -231,27 +240,27 @@ export default function MealCard({
               </View>
             )}
           </View>
-          
+
           <View style={styles.details}>
             <Text style={TYPOGRAPHY.headingSmall} numberOfLines={1}>
               {title}
             </Text>
-            
+
             <Text style={[TYPOGRAPHY.bodyMedium, styles.calories]}>
               {calories} calories
             </Text>
-            
+
             <View style={styles.macros}>
               <View style={styles.macroItem}>
                 <View style={[styles.macroIndicator, { backgroundColor: COLORS.error }]} />
                 <Text style={TYPOGRAPHY.bodySmall}>{protein}g protein</Text>
               </View>
-              
+
               <View style={styles.macroItem}>
                 <View style={[styles.macroIndicator, { backgroundColor: COLORS.primary }]} />
                 <Text style={TYPOGRAPHY.bodySmall}>{carbs}g carbs</Text>
               </View>
-              
+
               <View style={styles.macroItem}>
                 <View style={[styles.macroIndicator, { backgroundColor: COLORS.warning }]} />
                 <Text style={TYPOGRAPHY.bodySmall}>{fat}g fat</Text>
@@ -356,17 +365,27 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: BORDER_RADIUS.xl,
     borderTopRightRadius: BORDER_RADIUS.xl,
   },
+
+  // ✅ FIX: anchor close button so long titles never push it off-screen
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    position: 'relative',
+    justifyContent: 'center',
+    minHeight: 56,
+  },
+  modalTitle: {
+    paddingRight: 56, // reserve space for the X
   },
   closeButton: {
+    position: 'absolute',
+    right: SPACING.md,
+    top: SPACING.md,
     padding: SPACING.sm,
+    zIndex: 10,
   },
+
   modalImage: {
     width: '100%',
     height: 200,

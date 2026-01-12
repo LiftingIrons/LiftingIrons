@@ -1,965 +1,838 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  SafeAreaView,
-  Platform,
-  Modal,
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import Header from '@/components/Header';
-import Card from '@/components/Card';
-import Button from '@/components/Button';
-import { Calendar, ChevronLeft, ChevronRight, X as Close, Dumbbell, Clock, Target, RefreshCw, ThumbsUp, ThumbsDown, Plus, Minus } from 'lucide-react-native';
-import { COLORS } from '@/constants/Colors';
-import { SPACING, BORDER_RADIUS } from '@/constants/Spacing';
-import { TYPOGRAPHY } from '@/constants/Typography';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '@/lib/supabase';
 import { useUser } from '@/context/UserContext';
-import WebSafeTouchableOpacity from '@/components/WebSafeTouchableOpacity';
-import { generateWorkoutPlan, getUserWorkoutPlans, WorkoutPlan } from '@/lib/supabase';
-import { exerciseLibrary } from '@/data/mockData';
+import { COLORS } from '@/constants/Colors';
+import { TYPOGRAPHY } from '@/constants/Typography';
+import { SPACING } from '@/constants/Spacing';
 
-export default function MyPlanScreen() {
-  const router = useRouter();
-  const { user, setUser } = useUser();
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
-  const [isLoadingWorkout, setIsLoadingWorkout] = useState(true);
-  const [isGeneratingWorkout, setIsGeneratingWorkout] = useState(false);
-  const [exerciseFeedback, setExerciseFeedback] = useState<{[key: string]: {liked?: boolean, weightFeedback?: 'light' | 'heavy' | 'perfect'}}>({});
-  const [completedExercises, setCompletedExercises] = useState<{[key: string]: boolean}>({});
+type Exercise = {
+  id: string;
+  name: string;
+  sets: number;
+  reps: string;
+  weight?: number | null;
+  notes?: string;
+};
 
-  // Function to calculate suggested weight based on exercise type, user weight, and experience
-  const calculateSuggestedWeight = (exercise: any, userWeight: number = 70, activityLevel: string = 'light') => {
-    if (!userWeight) userWeight = 70; // Default weight if not provided
-    
-    // Experience multipliers
-    const experienceMultipliers = {
-      'sedentary': 0.3,
-      'light': 0.5,
-      'moderate': 0.7,
-      'very': 0.9
-    };
-    
-    const multiplier = experienceMultipliers[activityLevel] || 0.5;
-    
-    // Base weight calculations as percentage of body weight
-    const exerciseWeightRatios = {
-      // Chest exercises
-      'Push-ups': 0, // Bodyweight
-      'Chest Press': userWeight * 0.8 * multiplier,
-      'Bench Press': userWeight * 0.9 * multiplier,
-      'Incline Press': userWeight * 0.7 * multiplier,
-      'Decline Press': userWeight * 0.8 * multiplier,
-      'Dumbbell Press': userWeight * 0.3 * multiplier, // Per dumbbell
-      'Flyes': userWeight * 0.2 * multiplier,
-      
-      // Back exercises
-      'Pull-ups': 0, // Bodyweight
-      'Lat Pulldown': userWeight * 0.7 * multiplier,
-      'Rows': userWeight * 0.6 * multiplier,
-      'Deadlift': userWeight * 1.2 * multiplier,
-      'T-Bar Row': userWeight * 0.8 * multiplier,
-      
-      // Shoulder exercises
-      'Shoulder Press': userWeight * 0.5 * multiplier,
-      'Lateral Raises': userWeight * 0.15 * multiplier,
-      'Front Raises': userWeight * 0.15 * multiplier,
-      'Rear Delt Flyes': userWeight * 0.1 * multiplier,
-      
-      // Leg exercises
-      'Squats': userWeight * 1.0 * multiplier,
-      'Leg Press': userWeight * 1.5 * multiplier,
-      'Lunges': userWeight * 0.3 * multiplier, // Per leg
-      'Leg Curls': userWeight * 0.4 * multiplier,
-      'Leg Extensions': userWeight * 0.5 * multiplier,
-      'Calf Raises': userWeight * 0.8 * multiplier,
-      
-      // Arm exercises
-      'Bicep Curls': userWeight * 0.2 * multiplier,
-      'Tricep Extensions': userWeight * 0.25 * multiplier,
-      'Hammer Curls': userWeight * 0.2 * multiplier,
-      'Tricep Dips': 0, // Bodyweight
-      
-      // Core exercises
-      'Planks': 0, // Bodyweight/time
-      'Crunches': 0, // Bodyweight
-      'Russian Twists': userWeight * 0.1 * multiplier,
-      'Weighted Sit-ups': userWeight * 0.15 * multiplier,
-    };
-    
-    // Find matching exercise by checking if exercise name contains key words
-    let suggestedWeight = 0;
-    const exerciseName = exercise.name.toLowerCase();
-    
-    for (const [key, weight] of Object.entries(exerciseWeightRatios)) {
-      if (exerciseName.includes(key.toLowerCase().split(' ')[0])) {
-        suggestedWeight = weight;
-        break;
-      }
+type DayPlan = {
+  dayIndex: number;
+  label: string;
+  focus: string;
+  exercises: Exercise[];
+};
+
+type PlanRow = {
+  id: string;
+  title: string | null;
+  focus: string | null;
+  created_at: string | null;
+  exercises: Exercise[] | null;
+  days: DayPlan[] | null;
+  plan_week_start: string | null;
+};
+
+type LogRow = {
+  exercise_id: string;
+  completed: boolean;
+  actual_weight: number | null;
+};
+
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function todayIndexLocal() {
+  const d = new Date();
+  return (d.getDay() + 6) % 7; // Monday=0
+}
+
+function estimateMinutes(exercises: Exercise[]) {
+  if (!exercises?.length) return 0;
+  const est = Math.round(exercises.length * 3.5 + 8);
+  return Math.min(Math.max(est, 15), 90);
+}
+
+function focusBadge(focus: string) {
+  const f = focus.toLowerCase();
+  if (f.includes('push')) return 'PUSH';
+  if (f.includes('pull')) return 'PULL';
+  if (f.includes('leg')) return 'LEGS';
+  if (f.includes('full')) return 'FULL';
+  if (f.includes('rest')) return 'REST';
+  return 'WORKOUT';
+}
+
+function warmupForFocus(focus: string) {
+  const f = focus.toLowerCase();
+  if (f.includes('push')) return ['5 min easy cardio', 'Band pull-aparts x20', 'Shoulder circles x20', '2 warm-up sets bench/press'];
+  if (f.includes('pull')) return ['5 min easy cardio', 'Scapular pull-ups x8', 'Band rows x20', '2 warm-up sets rows/pulldown'];
+  if (f.includes('leg')) return ['5 min easy cardio', 'Bodyweight squats x15', 'Hip hinges x15', '2 warm-up sets squat/press'];
+  if (f.includes('full')) return ['5 min easy cardio', 'Dynamic stretch 3 min', '2 light warm-up sets first lift'];
+  return ['5 min easy walk', 'Mobility 5 min'];
+}
+
+function cooldownDefault() {
+  return ['Walk 5 min', 'Stretch 5 min', 'Hydrate + protein'];
+}
+
+function niceDateLabel() {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+export default function ExercisePlan() {
+  const { user } = useUser();
+  const insets = useSafeAreaInsets();
+
+  const [loading, setLoading] = useState(true);
+  const [plan, setPlan] = useState<PlanRow | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number>(todayIndexLocal());
+  const [regenerating, setRegenerating] = useState(false);
+
+  // progress logs for current plan/day
+  const [logs, setLogs] = useState<Record<string, LogRow>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [swappingId, setSwappingId] = useState<string | null>(null);
+
+  const selected = useMemo(() => {
+    if (plan?.days?.length === 7) {
+      return plan.days.find((d) => d.dayIndex === selectedDay) ?? plan.days[0];
     }
-    
-    // If no specific match found, use category-based defaults
-    if (suggestedWeight === 0 && exercise.category) {
-      const categoryDefaults = {
-        'chest': userWeight * 0.6 * multiplier,
-        'back': userWeight * 0.7 * multiplier,
-        'shoulders': userWeight * 0.4 * multiplier,
-        'arms': userWeight * 0.2 * multiplier,
-        'legs': userWeight * 0.8 * multiplier,
-        'core': 0 // Usually bodyweight
-      };
-      
-      suggestedWeight = categoryDefaults[exercise.category.toLowerCase()] || userWeight * 0.3 * multiplier;
-    }
-    
-    // Round to nearest 2.5kg for practical weight selection
-    if (suggestedWeight > 0) {
-      return Math.round(suggestedWeight / 2.5) * 2.5;
-    }
-    
-    return 0; // Bodyweight exercises
-  };
+    return null;
+  }, [plan, selectedDay]);
 
-  // Generate workout based on user's goals using mock data
-  const generateWorkoutFromMockData = () => {
-    const dateString = selectedDate.toISOString().split('T')[0];
-    const dayOfWeek = selectedDate.getDay();
-    const dayOfMonth = selectedDate.getDate();
-    
-    // Create a weekly split with proper day labels
-    const dayLabels = ['Chest Day Today!', 'Back Day Today!', 'Leg Day Today!', 'Shoulder Day Today!', 'Arm Day Today!', 'Core Day Today!', 'Full Body Day Today!'];
-    const dayLabel = dayLabels[dayOfWeek];
-    
-    // Get exercises for the specific day
-    const categoryMap = {
-      0: 'Chest',    // Sunday - Chest Day
-      1: 'Back',     // Monday - Back Day  
-      2: 'Legs',     // Tuesday - Leg Day
-      3: 'Shoulders', // Wednesday - Shoulder Day
-      4: 'Arms',     // Thursday - Arm Day
-      5: 'Core',     // Friday - Core Day
-      6: 'Chest'     // Saturday - Chest Day
-    };
-    
-    const targetCategory = categoryMap[dayOfWeek];
-    let selectedExercises = exerciseLibrary.exercises.filter(exercise => 
-      exercise.category && exercise.category.toLowerCase() === targetCategory.toLowerCase()
-    );
-    
-    // If not enough exercises in target category, add more from general library
-    if (selectedExercises.length < 5) {
-      const additionalExercises = exerciseLibrary.exercises.filter(exercise => 
-        !selectedExercises.some(selected => selected.id === exercise.id)
-      );
-      selectedExercises = [...selectedExercises, ...additionalExercises];
-    }
-    
-    // Use date-based selection to vary exercises
-    const startIndex = dayOfMonth % Math.max(selectedExercises.length - 5 + 1, 1);
-    const finalExercises = selectedExercises.slice(startIndex, startIndex + 5);
-    
-    // If still not enough, add more from the beginning
-    if (finalExercises.length < 5) {
-      const needed = 5 - finalExercises.length;
-      const additional = selectedExercises.slice(0, needed);
-      finalExercises.push(...additional);
-    }
+  const exercises = selected?.exercises ?? plan?.exercises ?? [];
+  const focus = selected?.focus ?? plan?.focus ?? 'Workout';
+  const badge = focusBadge(focus);
 
-    // Convert to workout format with suggested weights
-    const workoutExercises = finalExercises.map(exercise => {
-      const suggestedWeight = calculateSuggestedWeight(
-        exercise, 
-        user?.dimensions?.weight || 70, 
-        user?.goals?.activityLevel || 'light'
-      );
+  const minutes = useMemo(() => estimateMinutes(exercises), [exercises]);
 
-      return {
-        name: exercise.name,
-        sets: 3,
-        reps: '10-12',
-        restTime: '60 seconds',
-        suggestedWeight: suggestedWeight,
-        targetMuscles: exercise.muscles || [exercise.category],
-        instructions: exercise.instructions || [`Perform ${exercise.name} with proper form`]
-      };
-    });
-    
-    return {
-      title: dayLabel,
-      description: `A focused ${targetCategory.toLowerCase()} workout to build strength and muscle`,
-      duration: 30,
-      difficulty: 'beginner',
-      exercises: workoutExercises,
-      calories_burned: 200
-    };
-  };
+  const completedCount = useMemo(() => {
+    return exercises.reduce((acc, ex) => acc + (logs[ex.id]?.completed ? 1 : 0), 0);
+  }, [exercises, logs]);
 
-  // Load workout plan for selected date
-  const loadWorkoutPlan = async () => {
-    setWorkoutPlan(null); // Clear current plan first
-    setIsLoadingWorkout(true);
-    
-    if (!user?.id) {
-      // Use mock data when no user ID
-      const mockWorkout = generateWorkoutFromMockData();
-      setWorkoutPlan({
-        id: `mock-workout-${selectedDate.toISOString().split('T')[0]}-${selectedDate.getTime()}`,
-        user_id: 'mock-user',
-        title: mockWorkout.title,
-        description: mockWorkout.description,
-        difficulty: mockWorkout.difficulty,
-        duration: mockWorkout.duration,
-        exercises: mockWorkout.exercises,
-        calories_burned: mockWorkout.calories_burned,
-        plan_date: selectedDate.toISOString().split('T')[0],
-        is_completed: false,
-        ai_generated: true,
-        created_at: new Date().toISOString()
-      });
-      setIsLoadingWorkout(false);
+  const loadLatestPlan = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .select('id, title, focus, created_at, exercises, days, plan_week_start')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) {
+      setPlan(null);
+      setLogs({});
+      setLoading(false);
       return;
     }
-    
-    try {
-      const dateString = selectedDate.toISOString().split('T')[0];
-      const plans = await getUserWorkoutPlans(user.id, dateString);
-      
-      if (plans && plans.length > 0) {
-        setWorkoutPlan(plans[0]);
-      } else {
-        // Generate from mock data if no saved plan
-        const mockWorkout = generateWorkoutFromMockData();
-        setWorkoutPlan({
-          id: `mock-workout-${dateString}-${selectedDate.getTime()}`,
-          user_id: user.id,
-          title: mockWorkout.title,
-          description: mockWorkout.description,
-          difficulty: mockWorkout.difficulty,
-          duration: mockWorkout.duration,
-          exercises: mockWorkout.exercises,
-          calories_burned: mockWorkout.calories_burned,
-          plan_date: dateString,
-          is_completed: false,
-          ai_generated: true,
-          created_at: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      console.error('Error loading workout plan:', error);
-      // Fallback to mock data on error
-      const mockWorkout = generateWorkoutFromMockData();
-      setWorkoutPlan({
-        id: `fallback-workout-${selectedDate.getTime()}`,
-        user_id: user?.id || 'mock-user',
-        title: mockWorkout.title,
-        description: mockWorkout.description,
-        difficulty: mockWorkout.difficulty,
-        duration: mockWorkout.duration,
-        exercises: mockWorkout.exercises,
-        calories_burned: mockWorkout.calories_burned,
-        plan_date: selectedDate.toISOString().split('T')[0],
-        is_completed: false,
-        ai_generated: true,
-        created_at: new Date().toISOString()
-      });
-    } finally {
-      setIsLoadingWorkout(false);
-    }
-  };
 
-  // Generate new workout plan
-  const handleGenerateWorkout = async () => {
-    if (!user?.id) {
-      // Generate new mock workout
-      const mockWorkout = generateWorkoutFromMockData();
-      setWorkoutPlan({
-        id: `new-mock-workout-${Date.now()}`,
-        user_id: 'mock-user',
-        title: mockWorkout.title,
-        description: mockWorkout.description,
-        difficulty: mockWorkout.difficulty,
-        duration: mockWorkout.duration,
-        exercises: mockWorkout.exercises,
-        calories_burned: mockWorkout.calories_burned,
-        plan_date: selectedDate.toISOString().split('T')[0],
-        is_completed: false,
-        ai_generated: true,
-        created_at: new Date().toISOString()
-      });
+    setPlan(data[0] as PlanRow);
+    setLoading(false);
+  }, [user?.id]);
+
+  const loadLogsForDay = async (planId: string, dayIdx: number) => {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from('workout_exercise_logs')
+      .select('exercise_id, completed, actual_weight')
+      .eq('user_id', user.id)
+      .eq('plan_id', planId)
+      .eq('day_index', dayIdx);
+
+    if (error || !data) {
+      setLogs({});
       return;
     }
-    
-    setIsGeneratingWorkout(true);
-    try {
-      const dateString = selectedDate.toISOString().split('T')[0];
-      
-      // Use the actual user data from sign-up for AI generation
-      const preferences = {
-        duration: 45,
-        difficulty: user.goals?.activityLevel === 'sedentary' ? 'beginner' : 
-                   user.goals?.activityLevel === 'light' ? 'intermediate' :
-                   user.goals?.activityLevel === 'moderate' ? 'intermediate' : 'advanced',
-        focusAreas: user.goals?.primary === 'weight-loss' ? ['cardio', 'full-body'] :
-                   user.goals?.primary === 'muscle-gain' ? ['strength', 'hypertrophy'] :
-                   user.goals?.primary === 'athletic' ? ['power', 'agility'] :
-                   ['general-fitness'],
-        userProfile: {
-          age: user.dimensions?.age,
-          weight: user.dimensions?.weight,
-          height: user.dimensions?.height,
-          gender: user.dimensions?.gender,
-          activityLevel: user.goals?.activityLevel,
-          primaryGoal: user.goals?.primary
-        }
+
+    const map: Record<string, LogRow> = {};
+    data.forEach((row: any) => {
+      map[row.exercise_id] = {
+        exercise_id: row.exercise_id,
+        completed: !!row.completed,
+        actual_weight: row.actual_weight ?? null,
       };
-      
-      const response = await generateWorkoutPlan(user.id, {
-        ...preferences,
-        date: dateString,
-      });
-      
-      if (response.success) {
-        setWorkoutPlan(response.workout);
-      } else {
-        // Fallback to mock data if API fails
-        const mockWorkout = generateWorkoutFromMockData();
-        setWorkoutPlan({
-          id: `fallback-workout-${Date.now()}`,
-          user_id: user.id,
-          title: mockWorkout.title,
-          description: mockWorkout.description,
-          difficulty: mockWorkout.difficulty,
-          duration: mockWorkout.duration,
-          exercises: mockWorkout.exercises,
-          calories_burned: mockWorkout.calories_burned,
-          plan_date: dateString,
-          is_completed: false,
-          ai_generated: true,
-          created_at: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      console.error('Error generating workout plan:', error);
-      // Fallback to mock data on error
-      const mockWorkout = generateWorkoutFromMockData();
-      setWorkoutPlan({
-        id: `error-fallback-workout-${Date.now()}`,
-        user_id: user?.id || 'mock-user',
-        title: mockWorkout.title,
-        description: mockWorkout.description,
-        difficulty: mockWorkout.difficulty,
-        duration: mockWorkout.duration,
-        exercises: mockWorkout.exercises,
-        calories_burned: mockWorkout.calories_burned,
-        plan_date: selectedDate.toISOString().split('T')[0],
-        is_completed: false,
-        ai_generated: true,
-        created_at: new Date().toISOString()
-      });
-    } finally {
-      setIsGeneratingWorkout(false);
-    }
-  };
-
-  // Load workout when component mounts or date changes
-  React.useEffect(() => {
-    loadWorkoutPlan();
-  }, [selectedDate, user?.id, user?.goals]);
-
-  const renderWorkoutContent = () => {
-    if (isLoadingWorkout) {
-      return (
-        <Card style={styles.workoutCard}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading workout plan...</Text>
-          </View>
-        </Card>
-      );
-    }
-
-    if (!workoutPlan) {
-      return (
-        <Card style={styles.workoutCard}>
-          <View style={styles.emptyWorkoutContainer}>
-            <Dumbbell size={48} color={COLORS.textSecondary} />
-            <Text style={styles.emptyWorkoutTitle}>No Workout Plan</Text>
-            <Text style={styles.emptyWorkoutText}>
-              Generate a personalized workout plan for today
-            </Text>
-            <Button
-              title={isGeneratingWorkout ? "Generating..." : "Generate Workout"}
-              onPress={handleGenerateWorkout}
-              variant="primary"
-              size="medium"
-              loading={isGeneratingWorkout}
-              disabled={isGeneratingWorkout}
-              style={styles.generateButton}
-            />
-          </View>
-        </Card>
-      );
-    }
-
-    return (
-      <Card style={styles.workoutCard}>
-        <View style={styles.workoutHeader}>
-          <View>
-            <Text style={TYPOGRAPHY.headingSmall}>{workoutPlan.title}</Text>
-            <Text style={styles.workoutDescription}>{workoutPlan.description}</Text>
-          </View>
-          <WebSafeTouchableOpacity
-            onPress={handleGenerateWorkout}
-            style={styles.refreshButton}
-            disabled={isGeneratingWorkout}
-          >
-            <RefreshCw size={20} color={COLORS.primary} />
-          </WebSafeTouchableOpacity>
-        </View>
-
-        <View style={styles.workoutStats}>
-          <View style={styles.workoutStatItem}>
-            <Clock size={16} color={COLORS.primary} />
-            <Text style={styles.workoutStatText}>{workoutPlan.duration} min</Text>
-          </View>
-          <View style={styles.workoutStatItem}>
-            <Target size={16} color={COLORS.primary} />
-            <Text style={styles.workoutStatText}>{workoutPlan.difficulty}</Text>
-          </View>
-          <View style={styles.workoutStatItem}>
-            <Dumbbell size={16} color={COLORS.primary} />
-            <Text style={styles.workoutStatText}>{workoutPlan.exercises?.length || 0} exercises</Text>
-          </View>
-        </View>
-
-        {workoutPlan.exercises?.map((exercise, index) => {
-          const exerciseKey = `${workoutPlan.id}-${index}`;
-          const feedback = exerciseFeedback[exerciseKey];
-          const isCompleted = completedExercises[exerciseKey];
-          
-          return (
-            <View key={index} style={styles.exercise}>
-              <View style={styles.exerciseHeader}>
-                <WebSafeTouchableOpacity 
-                  onPress={() => handleExercisePress(exercise.name)}
-                  style={styles.exerciseNameButton}
-                >
-                  <Text style={styles.exerciseName}>{exercise.name}</Text>
-                  <Text style={styles.exerciseViewDetails}>View Details →</Text>
-                </WebSafeTouchableOpacity>
-                <Text style={styles.exerciseDetails}>
-                  {exercise.sets} sets × {exercise.reps}
-                </Text>
-              </View>
-              {exercise.restTime && (
-                <Text style={styles.exerciseRest}>Rest: {exercise.restTime}</Text>
-              )}
-              {exercise.suggestedWeight !== undefined && (
-                <View style={styles.weightContainer}>
-                  <Text style={styles.exerciseWeight}>
-                    {exercise.suggestedWeight > 0 ? `Suggested: ${exercise.suggestedWeight}kg` : 'Bodyweight'}
-                  </Text>
-                  {exercise.suggestedWeight > 0 && (
-                    <View style={styles.weightFeedback}>
-                      <WebSafeTouchableOpacity
-                        style={[
-                          styles.weightButton,
-                          feedback?.weightFeedback === 'light' && styles.weightButtonActive
-                        ]}
-                        onPress={() => handleWeightFeedback(index, 'light')}
-                      >
-                        <Minus size={16} color={feedback?.weightFeedback === 'light' ? COLORS.white : COLORS.warning} />
-                        <Text style={[
-                          styles.weightButtonText,
-                          feedback?.weightFeedback === 'light' && styles.weightButtonTextActive
-                        ]}>Too Light</Text>
-                      </WebSafeTouchableOpacity>
-                      
-                      <WebSafeTouchableOpacity
-                        style={[
-                          styles.weightButton,
-                          feedback?.weightFeedback === 'heavy' && styles.weightButtonActive
-                        ]}
-                        onPress={() => handleWeightFeedback(index, 'heavy')}
-                      >
-                        <Plus size={16} color={feedback?.weightFeedback === 'heavy' ? COLORS.white : COLORS.error} />
-                        <Text style={[
-                          styles.weightButtonText,
-                          feedback?.weightFeedback === 'heavy' && styles.weightButtonTextActive
-                        ]}>Too Heavy</Text>
-                      </WebSafeTouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              )}
-              {exercise.targetMuscles && (
-                <Text style={styles.exerciseMuscles}>
-                  Targets: {exercise.targetMuscles.join(', ')}
-                </Text>
-              )}
-              
-              {/* Exercise Like/Dislike Buttons */}
-              <View style={styles.exerciseFeedback}>
-                <Text style={styles.feedbackLabel}>How was this exercise?</Text>
-                <View style={styles.feedbackButtons}>
-                  <WebSafeTouchableOpacity
-                    style={[
-                      styles.feedbackButton,
-                      feedback?.liked === true && styles.likedButton
-                    ]}
-                    onPress={() => handleExerciseLike(index, true)}
-                  >
-                    <ThumbsUp 
-                      size={16} 
-                      color={feedback?.liked === true ? COLORS.white : COLORS.success}
-                      fill={feedback?.liked === true ? COLORS.white : 'none'}
-                    />
-                    <Text style={[
-                      styles.feedbackButtonText,
-                      feedback?.liked === true && styles.feedbackButtonTextActive
-                    ]}>Like</Text>
-                  </WebSafeTouchableOpacity>
-                  
-                  <WebSafeTouchableOpacity
-                    style={[
-                      styles.feedbackButton,
-                      feedback?.liked === false && styles.dislikedButton
-                    ]}
-                    onPress={() => handleExerciseLike(index, false)}
-                  >
-                    <ThumbsDown 
-                      size={16} 
-                      color={feedback?.liked === false ? COLORS.white : COLORS.error}
-                      fill={feedback?.liked === false ? COLORS.white : 'none'}
-                    />
-                    <Text style={[
-                      styles.feedbackButtonText,
-                      feedback?.liked === false && styles.feedbackButtonTextActive
-                    ]}>Dislike</Text>
-                  </WebSafeTouchableOpacity>
-                </View>
-              </View>
-              
-              {/* Exercise Completion Button */}
-              <WebSafeTouchableOpacity
-                style={[
-                  styles.completionButton,
-                  isCompleted && styles.completionButtonCompleted
-                ]}
-                onPress={() => handleExerciseCompletion(index)}
-              >
-                <Text style={[
-                  styles.completionButtonText,
-                  isCompleted && styles.completionButtonTextCompleted
-                ]}>
-                  {isCompleted ? '✓ Completed' : 'Mark Complete'}
-                </Text>
-              </WebSafeTouchableOpacity>
-            </View>
-          );
-        })}
-
-        {workoutPlan.calories_burned && (
-          <View style={styles.caloriesBurned}>
-            <Text style={styles.caloriesBurnedText}>
-              Estimated calories burned: {workoutPlan.calories_burned} kcal
-            </Text>
-          </View>
-        )}
-      </Card>
-    );
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric' 
     });
+
+    setLogs(map);
   };
 
-  const changeDate = (days: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(selectedDate.getDate() + days);
-    setSelectedDate(newDate);
+  useEffect(() => {
+    loadLatestPlan();
+  }, [loadLatestPlan]);
+
+  useEffect(() => {
+    if (!plan?.id) return;
+    loadLogsForDay(plan.id, selectedDay);
+  }, [plan?.id, selectedDay]);
+
+  useEffect(() => {
+    setSelectedDay(todayIndexLocal());
+  }, []);
+
+  const regenerate = async () => {
+    if (!user?.id) return;
+    setRegenerating(true);
+
+    const { error } = await supabase.functions.invoke('generate-workout', {
+      body: { user_id: user.id },
+    });
+
+    if (error) console.error('generate-workout error:', error);
+
+    await loadLatestPlan();
+    setRegenerating(false);
   };
 
-  const handleExerciseLike = (exerciseIndex: number, liked: boolean) => {
-    const exerciseKey = `${workoutPlan?.id}-${exerciseIndex}`;
-    setExerciseFeedback(prev => ({
-      ...prev,
-      [exerciseKey]: {
-        ...prev[exerciseKey],
-        liked: prev[exerciseKey]?.liked === liked ? undefined : liked
-      }
-    }));
-    
-    // Here you could save feedback to Supabase for AI learning
-    console.log(`Exercise ${exerciseIndex} ${liked ? 'liked' : 'disliked'}`);
-  };
+  const toggleComplete = async (exerciseId: string) => {
+    if (!user?.id || !plan?.id) return;
 
-  const handleWeightFeedback = (exerciseIndex: number, feedback: 'light' | 'heavy') => {
-    const exerciseKey = `${workoutPlan?.id}-${exerciseIndex}`;
-    const currentFeedback = exerciseFeedback[exerciseKey]?.weightFeedback;
-    const newFeedback = currentFeedback === feedback ? 'perfect' : feedback;
-    
-    setExerciseFeedback(prev => ({
-      ...prev,
-      [exerciseKey]: {
-        ...prev[exerciseKey],
-        weightFeedback: newFeedback
-      }
-    }));
-    
-    // Here you could save weight feedback to Supabase for AI learning
-    console.log(`Exercise ${exerciseIndex} weight is ${newFeedback}`);
-  };
+    const current = logs[exerciseId]?.completed ?? false;
+    const next = !current;
 
-  const handleExercisePress = (exerciseName: string) => {
-    // Find the exercise in the library
-    const exercise = exerciseLibrary.exercises.find(ex => 
-      ex.name.toLowerCase() === exerciseName.toLowerCase()
-    );
-    
-    if (exercise) {
-      // Navigate to library tab and show the specific exercise
-      router.push({
-        pathname: '/(tabs)/library',
-        params: { 
-          section: 'exercises',
-          exerciseId: exercise.id,
-          exerciseName: exercise.name
-        }
-      });
+    setSavingId(exerciseId);
+
+    const { error } = await supabase
+      .from('workout_exercise_logs')
+      .upsert(
+        {
+          user_id: user.id,
+          plan_id: plan.id,
+          day_index: selectedDay,
+          exercise_id: exerciseId,
+          completed: next,
+          actual_weight: logs[exerciseId]?.actual_weight ?? null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,plan_id,day_index,exercise_id' }
+      );
+
+    if (!error) {
+      setLogs((prev) => ({
+        ...prev,
+        [exerciseId]: {
+          exercise_id: exerciseId,
+          completed: next,
+          actual_weight: prev[exerciseId]?.actual_weight ?? null,
+        },
+      }));
     } else {
-      // Fallback: just navigate to exercises section
-      router.push({
-        pathname: '/(tabs)/library',
-        params: { section: 'exercises' }
-      });
+      console.error('save complete error:', error);
     }
+
+    setSavingId(null);
   };
 
-  const handleExerciseCompletion = (exerciseIndex: number) => {
-    const exerciseKey = `${workoutPlan?.id}-${exerciseIndex}`;
-    const isCompleted = !completedExercises[exerciseKey];
-    
-    setCompletedExercises(prev => ({
-      ...prev,
-      [exerciseKey]: isCompleted
-    }));
-    
-    // Here you could save completion status to Supabase for AI learning
-    console.log(`Exercise ${exerciseIndex} ${isCompleted ? 'completed' : 'uncompleted'}`);
-    
-    // Calculate calories burned for this exercise (example calculation)
-    if (isCompleted && workoutPlan?.exercises[exerciseIndex]) {
-      const exercise = workoutPlan.exercises[exerciseIndex];
-      const estimatedCalories = calculateExerciseCalories(exercise, user?.dimensions?.weight || 70);
-      console.log(`Estimated calories burned: ${estimatedCalories}`);
+  const adjustWeight = async (exerciseId: string, delta: number, suggested: number | null) => {
+    if (!user?.id || !plan?.id) return;
+
+    const base = logs[exerciseId]?.actual_weight ?? suggested ?? 0;
+    const next = Math.max(0, Math.round((base + delta) * 2) / 2); // 0.5kg steps
+
+    setSavingId(exerciseId);
+
+    const { error } = await supabase
+      .from('workout_exercise_logs')
+      .upsert(
+        {
+          user_id: user.id,
+          plan_id: plan.id,
+          day_index: selectedDay,
+          exercise_id: exerciseId,
+          completed: logs[exerciseId]?.completed ?? false,
+          actual_weight: next,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,plan_id,day_index,exercise_id' }
+      );
+
+    if (!error) {
+      setLogs((prev) => ({
+        ...prev,
+        [exerciseId]: {
+          exercise_id: exerciseId,
+          completed: prev[exerciseId]?.completed ?? false,
+          actual_weight: next,
+        },
+      }));
+    } else {
+      console.error('save weight error:', error);
     }
+
+    setSavingId(null);
   };
 
-  const calculateExerciseCalories = (exercise: any, userWeight: number) => {
-    // Basic calorie calculation based on exercise type and user weight
-    const baseCaloriesPerMinute = {
-      'chest': 8,
-      'back': 7,
-      'shoulders': 6,
-      'arms': 5,
-      'legs': 10,
-      'core': 6,
-      'cardio': 12
-    };
-    
-    const category = exercise.targetMuscles?.[0]?.toLowerCase() || 'general';
-    const caloriesPerMinute = baseCaloriesPerMinute[category] || 7;
-    const estimatedDuration = 3; // Assume 3 minutes per exercise (including rest)
-    
-    // Adjust for user weight (heavier users burn more calories)
-    const weightMultiplier = userWeight / 70; // 70kg as baseline
-    
-    return Math.round(caloriesPerMinute * estimatedDuration * weightMultiplier);
+  const swapExercise = async (exercise: Exercise) => {
+    if (!user?.id || !plan?.id) return;
+
+    setSwappingId(exercise.id);
+
+    const bodyweightGuess = 75;
+    const avoid_names = exercises.map((e) => e.name);
+
+    const { data, error } = await supabase.functions.invoke('swap-exercise', {
+      body: {
+        user_id: user.id,
+        exercise_id: exercise.id,
+        focus,
+        bodyweight_kg: bodyweightGuess,
+        avoid_names,
+      },
+    });
+
+    if (error) {
+      console.error('swap-exercise error:', error);
+      setSwappingId(null);
+      return;
+    }
+
+    const replacement: Exercise | undefined = data?.exercise;
+    if (!replacement?.id) {
+      setSwappingId(null);
+      return;
+    }
+
+    // Update local plan JSON
+    const newPlan: PlanRow = JSON.parse(JSON.stringify(plan));
+
+    if (newPlan.days?.length === 7) {
+      const day = newPlan.days.find((d) => d.dayIndex === selectedDay);
+      if (day) {
+        day.exercises = day.exercises.map((x) => (x.id === exercise.id ? replacement : x));
+      }
+      const dayNow = newPlan.days.find((d) => d.dayIndex === selectedDay);
+      newPlan.exercises = dayNow?.exercises ?? newPlan.exercises;
+      newPlan.focus = dayNow?.focus ?? newPlan.focus;
+    } else {
+      newPlan.exercises = (newPlan.exercises ?? []).map((x) => (x.id === exercise.id ? replacement : x));
+    }
+
+    const { error: updateError } = await supabase
+      .from('workout_plans')
+      .update({
+        days: newPlan.days,
+        exercises: newPlan.exercises,
+        focus: newPlan.focus,
+      })
+      .eq('id', plan.id);
+
+    if (updateError) {
+      console.error('plan update error:', updateError);
+      setSwappingId(null);
+      return;
+    }
+
+    // clear log for replaced exercise id (optional)
+    setLogs((prev) => {
+      const copy = { ...prev };
+      delete copy[exercise.id];
+      return copy;
+    });
+
+    setPlan(newPlan);
+    setSwappingId(null);
   };
+
+  // ---------------- UI states ----------------
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.mutedCenter}>Loading your plan…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.center}>
+          <Text style={styles.h1}>No workout plan yet</Text>
+          <Text style={styles.mutedCenter}>Generate your weekly plan to see workouts here.</Text>
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, regenerating && { opacity: 0.7 }]}
+            onPress={regenerate}
+            disabled={regenerating}
+          >
+            <Text style={styles.primaryBtnText}>
+              {regenerating ? 'Generating…' : 'Generate weekly plan'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const headerTitle = plan.title ?? 'Weekly Plan';
+  const week = plan.plan_week_start ? `Week of ${plan.plan_week_start}` : '';
+  const warmup = warmupForFocus(focus);
+  const cooldown = cooldownDefault();
+
   return (
-    <SafeAreaView style={styles.container}>
-      <Header 
-        title="My Plan"
-        subtitle="Your personalized fitness journey 🎯"
-      />
-      
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{
+          paddingBottom: SPACING.xxxl + insets.bottom,
+        }}
       >
-        {/* Date Navigation */}
-        <View style={styles.dateNav}>
-          <WebSafeTouchableOpacity onPress={() => changeDate(-1)}>
-            <ChevronLeft size={24} color={COLORS.primary} />
-          </WebSafeTouchableOpacity>
-          
-          <View style={styles.dateContainer}>
-            <Calendar size={20} color={COLORS.primary} />
-            <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+        {/* Home-style banner header */}
+        <View style={styles.bannerWrap}>
+          <View style={styles.banner}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.brand}>LiftingIrons</Text>
+              <Text style={styles.hello}>{headerTitle}</Text>
+              <Text style={styles.date}>{niceDateLabel()}</Text>
+              {!!week && <Text style={styles.date}>{week}</Text>}
+            </View>
+
+            <View style={styles.streakPill}>
+              <Text style={styles.streakEmoji}>🏋️</Text>
+              <Text style={styles.streakValue}>{badge}</Text>
+              <Text style={styles.streakSmall}>today</Text>
+            </View>
           </View>
-          
-          <WebSafeTouchableOpacity onPress={() => changeDate(1)}>
-            <ChevronRight size={24} color={COLORS.primary} />
-          </WebSafeTouchableOpacity>
         </View>
 
-        {/* AI-Generated Workout Plan */}
-        {renderWorkoutContent()}
+        <View style={styles.grid}>
+          {/* Summary card */}
+          <View style={styles.card}>
+            <View style={styles.cardAccent} />
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>📊 Summary</Text>
+              <Text style={styles.cardMeta}>{completedCount}/{exercises.length} done</Text>
+            </View>
 
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{completedCount}/{exercises.length}</Text>
+                <Text style={styles.statLabel}>Completed</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{minutes}</Text>
+                <Text style={styles.statLabel}>Minutes</Text>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.stat}>
+                <Text style={styles.statValue} numberOfLines={1}>{focus}</Text>
+                <Text style={styles.statLabel}>Focus</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={regenerate}
+              disabled={regenerating}
+              style={[styles.secondaryBtn, regenerating && { opacity: 0.7 }]}
+            >
+              <Text style={styles.secondaryBtnText}>
+                {regenerating ? 'Regenerating…' : 'Regenerate plan'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Day selector */}
+          {plan.days?.length === 7 && (
+            <View style={styles.card}>
+              <View style={styles.cardAccent} />
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.cardTitle}>🗓️ Days</Text>
+                <Text style={styles.cardMeta}>Pick a day</Text>
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.dayRow}>
+                  {DAY_LABELS.map((lbl, idx) => {
+                    const active = idx === selectedDay;
+                    return (
+                      <TouchableOpacity
+                        key={lbl}
+                        onPress={() => setSelectedDay(idx)}
+                        style={[styles.dayChip, active && styles.dayChipActive]}
+                      >
+                        <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                          {lbl}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Warmup */}
+          <View style={styles.card}>
+            <View style={styles.cardAccent} />
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>🔥 Warm-up</Text>
+              <Text style={styles.cardMeta}>5–10 min</Text>
+            </View>
+
+            {warmup.map((w, i) => (
+              <Text key={i} style={styles.bullet}>• {w}</Text>
+            ))}
+          </View>
+
+          {/* Rest day */}
+          {badge === 'REST' ? (
+            <View style={styles.card}>
+              <View style={styles.cardAccent} />
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.cardTitle}>🧘 Rest day</Text>
+                <Text style={styles.cardMeta}>Recover</Text>
+              </View>
+
+              <Text style={styles.mutedLeft}>Light walk, mobility and recovery.</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.h2}>Workout</Text>
+
+              {exercises.map((ex, idx) => {
+                const completed = logs[ex.id]?.completed ?? false;
+                const actual = logs[ex.id]?.actual_weight ?? null;
+
+                return (
+                  <View
+                    key={`${selectedDay}-${idx}-${ex.id}`}
+                    style={[styles.card, completed && styles.cardDone]}
+                  >
+                    <View style={styles.cardAccent} />
+
+                    <View style={styles.exerciseHeader}>
+                      <TouchableOpacity onPress={() => toggleComplete(ex.id)} style={[styles.check, completed && styles.checkOn]}>
+                        <Text style={[styles.checkText, completed && styles.checkTextOn]}>
+                          {completed ? '✓' : ''}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[styles.exerciseName, completed && styles.exerciseNameDone]}
+                          numberOfLines={1}
+                        >
+                          {ex.name}
+                        </Text>
+                        <Text style={[styles.meta, completed && styles.metaDone]}>
+                          {ex.sets} sets • {ex.reps}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => swapExercise(ex)}
+                        disabled={swappingId === ex.id}
+                        style={[styles.swapBtn, swappingId === ex.id && { opacity: 0.7 }]}
+                      >
+                        <Text style={styles.swapText}>{swappingId === ex.id ? 'Swapping…' : 'Swap'}</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Weight controls */}
+                    <View style={styles.weightRow}>
+                      <Text style={styles.weightLabel}>Weight</Text>
+
+                      <TouchableOpacity
+                        onPress={() => adjustWeight(ex.id, -2.5, typeof ex.weight === 'number' ? ex.weight : null)}
+                        disabled={savingId === ex.id}
+                        style={styles.smallBtn}
+                      >
+                        <Text style={styles.smallBtnText}>−</Text>
+                      </TouchableOpacity>
+
+                      <View style={styles.weightPill}>
+                        <Text style={styles.weightText}>
+                          {typeof actual === 'number'
+                            ? `${actual} kg`
+                            : typeof ex.weight === 'number'
+                            ? `${ex.weight} kg`
+                            : 'Bodyweight'}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => adjustWeight(ex.id, +2.5, typeof ex.weight === 'number' ? ex.weight : null)}
+                        disabled={savingId === ex.id}
+                        style={styles.smallBtn}
+                      >
+                        <Text style={styles.smallBtnText}>＋</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {!!ex.notes && <Text style={styles.notes}>{ex.notes}</Text>}
+                  </View>
+                );
+              })}
+            </>
+          )}
+
+          {/* Cooldown */}
+          <View style={styles.card}>
+            <View style={styles.cardAccent} />
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardTitle}>❄️ Cooldown</Text>
+              <Text style={styles.cardMeta}>5–10 min</Text>
+            </View>
+
+            {cooldown.map((c, i) => (
+              <Text key={i} style={styles.bullet}>• {c}</Text>
+            ))}
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.background },
+
+  // Home-style banner
+  bannerWrap: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.sm,
+  },
+  banner: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 24,
+    padding: SPACING.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  brand: {
+    ...TYPOGRAPHY.headingLarge,
+    color: 'white',
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  hello: {
+    ...TYPOGRAPHY.headingMedium,
+    color: 'white',
+    marginTop: 6,
+  },
+  date: {
+    ...TYPOGRAPHY.bodySmall,
+    color: 'rgba(255,255,255,0.92)',
+    marginTop: 6,
+  },
+  streakPill: {
+    width: 92,
+    borderRadius: 18,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakEmoji: { color: 'white', fontSize: 16, marginBottom: 2 },
+  streakValue: { color: 'white', fontSize: 14, fontWeight: '900' },
+  streakSmall: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 },
+
+  grid: {
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.md,
+  },
+
+  center: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  content: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xxxl,
-  },
-  dateNav: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: SPACING.md,
+    padding: SPACING.lg,
   },
-  dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dateText: {
-    ...TYPOGRAPHY.labelMedium,
-    marginLeft: SPACING.sm,
-  },
-  workoutCard: {
-    marginBottom: SPACING.md,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  loadingText: {
-    ...TYPOGRAPHY.bodyMedium,
+
+  h1: { ...TYPOGRAPHY.headingLarge, textAlign: 'center' },
+  h2: { ...TYPOGRAPHY.headingMedium, marginTop: SPACING.lg, marginBottom: SPACING.md },
+
+  mutedCenter: {
+    ...TYPOGRAPHY.bodySmall,
     color: COLORS.textSecondary,
-    marginTop: SPACING.md,
+    marginTop: SPACING.sm,
+    textAlign: 'center',
   },
-  emptyWorkoutContainer: {
-    alignItems: 'center',
-    padding: SPACING.xl,
+  mutedLeft: {
+    ...TYPOGRAPHY.bodySmall,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.sm,
+    textAlign: 'left',
   },
-  emptyWorkoutTitle: {
-    ...TYPOGRAPHY.headingSmall,
-    marginTop: SPACING.md,
+
+  // Home-style card
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 22,
+    padding: SPACING.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    overflow: 'hidden',
+  },
+  cardAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+    backgroundColor: COLORS.primaryLight,
+    opacity: 0.9,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
     marginBottom: SPACING.sm,
   },
-  emptyWorkoutText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-  },
-  generateButton: {
-    marginTop: SPACING.md,
-  },
-  workoutHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.md,
-  },
-  workoutDescription: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  refreshButton: {
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.primaryLight + '20',
-  },
-  workoutStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
-  },
-  workoutStatItem: {
+  cardTitle: { ...TYPOGRAPHY.headingSmall, color: COLORS.text },
+  cardMeta: { ...TYPOGRAPHY.bodySmall, color: COLORS.textSecondary },
+
+  // Summary stats
+  statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  workoutStatText: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.textSecondary,
-    marginLeft: SPACING.xs,
-  },
-  exercise: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingVertical: SPACING.sm,
-  },
-  exerciseHeader: {
-    flexDirection: 'column',
-    marginBottom: SPACING.xs,
-  },
-  exerciseNameButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  exerciseName: {
-    ...TYPOGRAPHY.labelMedium,
-    color: COLORS.primary,
-    flex: 1,
-  },
-  exerciseViewDetails: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.textSecondary,
-    fontStyle: 'italic',
-  },
-  exerciseDetails: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.textSecondary,
-    alignSelf: 'flex-end',
-  },
-  exerciseRest: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.primary,
-    marginTop: SPACING.xs,
-  },
-  exerciseWeight: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.success,
-    marginTop: SPACING.xs,
-    fontWeight: '600',
-  },
-  weightContainer: {
-    marginTop: SPACING.xs,
-  },
-  weightFeedback: {
-    flexDirection: 'row',
-    gap: SPACING.xs,
-    marginTop: SPACING.xs,
-  },
-  weightButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-  },
-  weightButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  weightButtonText: {
-    ...TYPOGRAPHY.labelSmall,
-    marginLeft: SPACING.xs,
-    color: COLORS.textSecondary,
-  },
-  weightButtonTextActive: {
-    color: COLORS.white,
-  },
-  exerciseMuscles: {
-    ...TYPOGRAPHY.bodySmall,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  exerciseFeedback: {
-    marginTop: SPACING.md,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  feedbackLabel: {
-    ...TYPOGRAPHY.labelSmall,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  feedbackButtons: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  feedbackButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-  },
-  likedButton: {
-    backgroundColor: COLORS.success,
-    borderColor: COLORS.success,
-  },
-  dislikedButton: {
-    backgroundColor: COLORS.error,
-    borderColor: COLORS.error,
-  },
-  feedbackButtonText: {
-    ...TYPOGRAPHY.labelSmall,
-    marginLeft: SPACING.xs,
-    color: COLORS.textSecondary,
-  },
-  feedbackButtonTextActive: {
-    color: COLORS.white,
-  },
-  caloriesBurned: {
-    backgroundColor: COLORS.primaryLight + '20',
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    marginTop: SPACING.md,
-  },
-  caloriesBurnedText: {
-    ...TYPOGRAPHY.bodyMedium,
-    color: COLORS.primary,
-    textAlign: 'center',
-  },
-  completedExercise: {
-    backgroundColor: COLORS.success + '10',
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.success,
-  },
-  completionButton: {
-    backgroundColor: COLORS.primary,
+    marginTop: SPACING.sm,
     paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 18,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  stat: { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: 16, fontWeight: '800', color: COLORS.text },
+  statLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
+  divider: { width: 1, height: 28, backgroundColor: COLORS.border },
+
+  secondaryBtn: {
+    marginTop: SPACING.md,
+    paddingVertical: 12,
+    borderRadius: 16,
     alignItems: 'center',
-    marginVertical: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
-  completionButtonCompleted: {
-    backgroundColor: COLORS.success,
+  secondaryBtnText: { color: COLORS.primary, fontWeight: '800' },
+
+  primaryBtn: {
+    marginTop: SPACING.lg,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 16,
   },
-  completionButtonText: {
-    ...TYPOGRAPHY.labelMedium,
-    color: COLORS.white,
-    fontWeight: '600',
+  primaryBtnText: { color: '#fff', fontWeight: '800' },
+
+  // Day chips
+  dayRow: { flexDirection: 'row', gap: 10 },
+  dayChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  completionButtonTextCompleted: {
-    color: COLORS.white,
+  dayChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  dayChipText: { color: COLORS.textSecondary, fontWeight: '800' },
+  dayChipTextActive: { color: '#fff' },
+
+  // Bullets & notes
+  bullet: { ...TYPOGRAPHY.bodySmall, color: COLORS.textSecondary, marginTop: 6 },
+  notes: { ...TYPOGRAPHY.bodySmall, color: COLORS.textSecondary, marginTop: SPACING.md },
+
+  // Exercise card header
+  exerciseHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
+
+  // Done effect
+  cardDone: { opacity: 0.55 },
+  exerciseNameDone: {
+    textDecorationLine: 'line-through',
+    color: COLORS.textSecondary,
   },
+  metaDone: { color: COLORS.textSecondary },
+
+  // Checkbox style aligned to Home
+  check: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkOn: { backgroundColor: COLORS.success, borderColor: COLORS.success },
+  checkText: { fontWeight: '900', color: COLORS.text, fontSize: 16 },
+  checkTextOn: { color: 'white' },
+
+  exerciseName: { ...TYPOGRAPHY.headingMedium, color: COLORS.text },
+  meta: { ...TYPOGRAPHY.bodySmall, color: COLORS.textSecondary, marginTop: 4 },
+
+  swapBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.background,
+  },
+  swapText: { color: COLORS.primary, fontWeight: '800' },
+
+  weightRow: {
+    marginTop: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  weightLabel: { ...TYPOGRAPHY.bodySmall, color: COLORS.textSecondary, width: 56 },
+
+  smallBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  smallBtnText: { fontSize: 18, fontWeight: '900', color: COLORS.text },
+
+  weightPill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  weightText: { fontWeight: '900', color: COLORS.text },
 });
