@@ -13,6 +13,9 @@ import { supabase } from "@/lib/supabase";
 import Button from "@/components/Button";
 import { COLORS } from "@/constants/Colors";
 
+const { barcode } = useLocalSearchParams<{ barcode?: string }>();
+
+
 type FoodItem = {
   id: string;
   name: string;

@@ -10,28 +10,26 @@ export function useStepsToday() {
     let sub: any;
 
     (async () => {
-      const isAvail = await Pedometer.isAvailableAsync();
-      setAvailable(isAvail);
-      if (!isAvail) return;
+      try {
+        const isAvail = await Pedometer.isAvailableAsync();
+        setAvailable(isAvail);
+        if (!isAvail) return;
 
-      // iOS can usually fetch "steps today" from midnight -> now.
-      if (Platform.OS === "ios") {
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
-        const end = new Date();
-
-        try {
+        // iOS: best-effort "today total"
+        if (Platform.OS === "ios") {
+          const start = new Date();
+          start.setHours(0, 0, 0, 0);
+          const end = new Date();
           const res = await Pedometer.getStepCountAsync(start, end);
           setSteps(res.steps);
-        } catch {
-          // ignore for now
         }
-      }
 
-      // Live step updates while app is open
-      sub = Pedometer.watchStepCount((result) => {
-        setSteps(result.steps);
-      });
+        // Live updates (while app open)
+        sub = Pedometer.watchStepCount((r) => setSteps(r.steps));
+      } catch {
+        // If native module isn't present, don't crash the UI
+        setAvailable(false);
+      }
     })();
 
     return () => sub?.remove?.();

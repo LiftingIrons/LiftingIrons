@@ -1,7 +1,7 @@
 PODS:
   - EASClient (1.0.8):
     - ExpoModulesCore
-  - EXConstants (18.0.12):
+  - EXConstants (18.0.13):
     - ExpoModulesCore
   - EXImageLoader (6.0.0):
     - ExpoModulesCore
@@ -9,7 +9,7 @@ PODS:
   - EXJSONUtils (0.15.0)
   - EXManifests (1.0.10):
     - ExpoModulesCore
-  - Expo (54.0.30):
+  - Expo (54.0.31):
     - ExpoModulesCore
     - hermes-engine
     - RCTRequired
@@ -2635,11 +2635,11 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   EASClient: 40dd9e740684782610c49becab2643782ea1a20c
-  EXConstants: 805f35b1b295c542ca6acce836f21a1f9ee104d5
+  EXConstants: fce59a631a06c4151602843667f7cfe35f81e271
   EXImageLoader: 189e3476581efe3ad4d1d3fb4735b7179eb26f05
   EXJSONUtils: 1d3e4590438c3ee593684186007028a14b3686cd
   EXManifests: a8d97683e5c7a3b026ffbd58559c64dc655b747b
-  Expo: 60c21ba34593688a2a6e8445c1f8b44abb0e3fae
+  Expo: 04993fbd7b06dc98ffac58da8847298470dc3db1
   expo-dev-client: 425ee077d6754a98cfe3a2e2410d29b440b24c9d
   expo-dev-launcher: a4f4cdef064ab1fb8621e5b8c7c457cd6e9568c3
   expo-dev-menu: 05b18812110c175814c6af0d09dd658abcc5e00d
@@ -2742,6 +2742,6 @@ SPEC CHECKSUMS:
   Yoga: 5934998fbeaef7845dbf698f698518695ab4cd1a
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: 9741f8a197ddc49b52652ab125c2d23f7392ccf1
+PODFILE CHECKSUM: 8ca3fec6ba8d86f545c3ed8fd1c655404b64d10e
 
 COCOAPODS: 1.16.2

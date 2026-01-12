@@ -8,10 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		16B0244CB8FCFDC810B2626C /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FE2386D8A27E6C5F99070F /* ExpoModulesProvider.swift */; };
+		266C46217F2449437704B4E0 /* libPods-LiftingIrons.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 69C8EDF845BAD3DB7F6E5BF9 /* libPods-LiftingIrons.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		6B055C374B437F3F89146EBA /* libPods-LiftingIrons.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F944BBDDB5EE1C775266135D /* libPods-LiftingIrons.a */; };
-		7011BC9141772E73BE39EC3B /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7442D384E9E472F5D88104FE /* ExpoModulesProvider.swift */; };
-		8ADDD7C511500AD30C98ECBF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D0E1853DB830D880D206CFD1 /* PrivacyInfo.xcprivacy */; };
+		6AC44E7E75FF8737F64F2FFC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5ACB70A4466B496B46DDEE90 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
@@ -20,16 +20,16 @@
 		13B07F961A680F5B00A75B9A /* LiftingIrons.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LiftingIrons.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = LiftingIrons/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = LiftingIrons/Info.plist; sourceTree = "<group>"; };
-		48EC2BDABF4BEB19323476FA /* Pods-LiftingIrons.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LiftingIrons.debug.xcconfig"; path = "Target Support Files/Pods-LiftingIrons/Pods-LiftingIrons.debug.xcconfig"; sourceTree = "<group>"; };
-		7442D384E9E472F5D88104FE /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-LiftingIrons/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		19E14D60FA5517CBDA300DEB /* Pods-LiftingIrons.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LiftingIrons.release.xcconfig"; path = "Target Support Files/Pods-LiftingIrons/Pods-LiftingIrons.release.xcconfig"; sourceTree = "<group>"; };
+		5ACB70A4466B496B46DDEE90 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = LiftingIrons/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		69C8EDF845BAD3DB7F6E5BF9 /* libPods-LiftingIrons.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-LiftingIrons.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = LiftingIrons/SplashScreen.storyboard; sourceTree = "<group>"; };
+		B0FE2386D8A27E6C5F99070F /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-LiftingIrons/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		D0E1853DB830D880D206CFD1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = LiftingIrons/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		CE69A8B5DA93C39B05A282EA /* Pods-LiftingIrons.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LiftingIrons.debug.xcconfig"; path = "Target Support Files/Pods-LiftingIrons/Pods-LiftingIrons.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = LiftingIrons/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* LiftingIrons-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "LiftingIrons-Bridging-Header.h"; path = "LiftingIrons/LiftingIrons-Bridging-Header.h"; sourceTree = "<group>"; };
-		F944BBDDB5EE1C775266135D /* libPods-LiftingIrons.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-LiftingIrons.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		FDA8BD74B0DA76CF8D22B830 /* Pods-LiftingIrons.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LiftingIrons.release.xcconfig"; path = "Target Support Files/Pods-LiftingIrons/Pods-LiftingIrons.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,13 +37,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6B055C374B437F3F89146EBA /* libPods-LiftingIrons.a in Frameworks */,
+				266C46217F2449437704B4E0 /* libPods-LiftingIrons.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		05D8F232A92605868A22D41B /* LiftingIrons */ = {
+			isa = PBXGroup;
+			children = (
+				B0FE2386D8A27E6C5F99070F /* ExpoModulesProvider.swift */,
+			);
+			name = LiftingIrons;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* LiftingIrons */ = {
 			isa = PBXGroup;
 			children = (
@@ -53,18 +61,36 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				D0E1853DB830D880D206CFD1 /* PrivacyInfo.xcprivacy */,
+				5ACB70A4466B496B46DDEE90 /* PrivacyInfo.xcprivacy */,
 			);
 			name = LiftingIrons;
+			sourceTree = "<group>";
+		};
+		1F1328297B41085CF8673D63 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				05D8F232A92605868A22D41B /* LiftingIrons */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				F944BBDDB5EE1C775266135D /* libPods-LiftingIrons.a */,
+				69C8EDF845BAD3DB7F6E5BF9 /* libPods-LiftingIrons.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		54B5C9218AF5C3B24EFDA4A8 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				CE69A8B5DA93C39B05A282EA /* Pods-LiftingIrons.debug.xcconfig */,
+				19E14D60FA5517CBDA300DEB /* Pods-LiftingIrons.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -81,8 +107,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				95B2C620FA9710E26EC4AB33 /* Pods */,
-				94DE80729248FA0F14782887 /* ExpoModulesProviders */,
+				54B5C9218AF5C3B24EFDA4A8 /* Pods */,
+				1F1328297B41085CF8673D63 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -95,32 +121,6 @@
 				13B07F961A680F5B00A75B9A /* LiftingIrons.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		94DE80729248FA0F14782887 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				96F735D08D7E7AC3C1735417 /* LiftingIrons */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
-		95B2C620FA9710E26EC4AB33 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				48EC2BDABF4BEB19323476FA /* Pods-LiftingIrons.debug.xcconfig */,
-				FDA8BD74B0DA76CF8D22B830 /* Pods-LiftingIrons.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
-		96F735D08D7E7AC3C1735417 /* LiftingIrons */ = {
-			isa = PBXGroup;
-			children = (
-				7442D384E9E472F5D88104FE /* ExpoModulesProvider.swift */,
-			);
-			name = LiftingIrons;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "LiftingIrons" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				9D690BCC12686CBA9AC3412F /* [Expo] Configure project */,
+				871D862571C0C0533B65D276 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				B4BB2741EA02CF5AD25391E7 /* [CP] Embed Pods Frameworks */,
+				C620700615A9813D824DA8D9 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				8ADDD7C511500AD30C98ECBF /* PrivacyInfo.xcprivacy in Resources */,
+				6AC44E7E75FF8737F64F2FFC /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -282,7 +282,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-LiftingIrons/Pods-LiftingIrons-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		9D690BCC12686CBA9AC3412F /* [Expo] Configure project */ = {
+		871D862571C0C0533B65D276 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -306,7 +306,7 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-LiftingIrons/expo-configure-project.sh\"\n";
 		};
-		B4BB2741EA02CF5AD25391E7 /* [CP] Embed Pods Frameworks */ = {
+		C620700615A9813D824DA8D9 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -336,7 +336,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				7011BC9141772E73BE39EC3B /* ExpoModulesProvider.swift in Sources */,
+				16B0244CB8FCFDC810B2626C /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -345,7 +345,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 48EC2BDABF4BEB19323476FA /* Pods-LiftingIrons.debug.xcconfig */;
+			baseConfigurationReference = CE69A8B5DA93C39B05A282EA /* Pods-LiftingIrons.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -381,7 +381,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = FDA8BD74B0DA76CF8D22B830 /* Pods-LiftingIrons.release.xcconfig */;
+			baseConfigurationReference = 19E14D60FA5517CBDA300DEB /* Pods-LiftingIrons.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

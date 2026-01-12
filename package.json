@@ -19,7 +19,7 @@
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "buffer": "^6.0.3",
-    "expo": "~54.0.25",
+    "expo": "~54.0.31",
     "expo-blur": "~15.0.7",
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.10",
@@ -62,7 +62,7 @@
     "@react-native-community/cli": "^11.1.1",
     "@supabase/supabase-js": "^2.89.0",
     "@types/react": "~19.1.10",
-    "@types/react-dom": "^19.2.3",
+    "@types/react-dom": "~19.1.7",
     "typescript": "~5.9.2"
   }
 }

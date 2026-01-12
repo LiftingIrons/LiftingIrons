@@ -1,24 +1,31 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, Button, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 export default function FoodScan() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const { mealIndex } = useLocalSearchParams<{ mealIndex?: string }>();
+
+  const { mealIndex, date } = useLocalSearchParams<{ mealIndex?: string; date?: string }>();
+
+  useEffect(() => {
+    if (permission && !permission.granted) {
+      requestPermission();
+    }
+  }, [permission, requestPermission]);
+
+  // ... keep the rest of your component the same
 
 
-if (!permission) {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <ActivityIndicator />
-      <Text style={{ marginTop: 10 }}>Loading camera…</Text>
-    </View>
-  );
-}
-
+  if (!permission) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator />
+        <Text style={{ marginTop: 10 }}>Loading camera…</Text>
+      </View>
+    );
+  }
 
   if (!permission.granted) {
     return (
@@ -41,11 +48,11 @@ if (!permission) {
         onBarcodeScanned={({ data }) => {
           if (scanned) return;
           setScanned(true);
-          router.push({
+
+          router.replace({
             pathname: "/food-confirm",
             params: { barcode: data, mealIndex: mealIndex ?? "" },
-        } as any);
-
+          } as any);
         }}
       />
 

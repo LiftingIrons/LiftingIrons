@@ -529,24 +529,24 @@ if (plans && plans.length > 0) {
                   );
                 }}
               />
-
               <Button
-                title="Scan barcode"
-                variant="secondary"
-                onPress={() => {
-                  closeEditModal();
-router.push(
-  {
-    pathname: "/food-search",
-    params: {
-      mealIndex: String(editMealIndex ?? ""),
-      date: formatDateKey(selectedDate),
-    },
-  } as any
-);
+  title="Scan barcode"
+  variant="primary"
+  onPress={() => {
+    closeEditModal();
+    router.push(
+      {
+        pathname: "/food-scan",
+        params: {
+          mealIndex: String(editMealIndex ?? ""),
+          date: formatDateKey(selectedDate),
+        },
+      } as any
+    );
+  }}
+/>
 
-                }}
-              />
+
             </View>
           </View>
         </Modal>
