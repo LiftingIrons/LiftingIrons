@@ -1,3 +1,5 @@
+export { ErrorBoundary } from "expo-router";
+
 import { useEffect } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { UserProvider, useUser } from "@/context/UserContext";
