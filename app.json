@@ -6,14 +6,20 @@
     "runtimeVersion": "1.0.0",
     "jsEngine": "jsc",
     "orientation": "portrait",
-    "icon": "./assets/images/ICON.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "platforms": ["ios", "android", "web"],
+    "newArchEnabled": false,
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.liftingirons.fitnessapp",
-      "buildNumber": "340",
+      "buildNumber": "367",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSCameraUsageDescription": "We use the camera to scan food barcodes and take progress photos.",
         "NSPhotoLibraryUsageDescription": "This app accesses photo library for progress tracking",
@@ -24,8 +30,9 @@
     "android": {
       "package": "com.liftingirons.fitnessapp",
       "versionCode": 1,
+      "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/ICON.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#3B82F6"
       },
       "permissions": [
@@ -52,7 +59,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/ICON.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
