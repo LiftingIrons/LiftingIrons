@@ -8,9 +8,13 @@ import { OnboardingProvider } from "@/context/OnboardingContext";
 import { useFonts } from "expo-font";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { View, ActivityIndicator } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
+
+// ✅ Prevent splash from auto-hiding until we say so
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppContent() {
-  const { user, isLoading } = useUser();
+  const { user } = useUser();
   const router = useRouter();
   const segments = useSegments();
 
@@ -20,40 +24,18 @@ function AppContent() {
     const inTabs = group === "(tabs)";
     const inOnboarding = group === "(onboarding)";
 
-    // ✅ Never block the app waiting on session restore.
-    // If user is null, show auth right away.
     if (!user && !inAuth) {
       router.replace("/(auth)/sign-up");
       return;
     }
 
-    // If we have a user, send them to tabs unless they’re already in tabs/onboarding.
     if (user && !(inTabs || inOnboarding)) {
       router.replace("/(tabs)/home");
       return;
     }
   }, [user, segments, router]);
 
-  return (
-    <>
-      <Slot />
-
-      {/* ✅ Optional: non-blocking indicator while restoring session */}
-      {isLoading ? (
-        <View
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 50,
-            alignItems: "center",
-          }}
-        >
-          <ActivityIndicator />
-        </View>
-      ) : null}
-    </>
-  );
+  return <Slot />;
 }
 
 function FontsGate({ children }: { children: React.ReactNode }) {
@@ -62,7 +44,15 @@ function FontsGate({ children }: { children: React.ReactNode }) {
     ...MaterialCommunityIcons.font,
   });
 
+  // ✅ Hide splash as soon as fonts are ready
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded]);
+
   if (!fontsLoaded) {
+    // While splash is showing, this UI might not be visible yet — that's OK.
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" />
