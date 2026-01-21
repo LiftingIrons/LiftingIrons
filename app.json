@@ -18,7 +18,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.liftingirons.fitnessapp",
-      "buildNumber": "367",
+      "buildNumber": "368",
       "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSCameraUsageDescription": "We use the camera to scan food barcodes and take progress photos.",
