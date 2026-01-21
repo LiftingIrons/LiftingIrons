@@ -1,69 +1,57 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { UserProvider, useUser } from "@/context/UserContext";
 import { OnboardingProvider } from "@/context/OnboardingContext";
 
 import { useFonts } from "expo-font";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { View, ActivityIndicator, Text } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 
 function AppContent() {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const segments = useSegments();
 
-  // Hard fallback: never allow infinite loading
-  const [bootTimedOut, setBootTimedOut] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setBootTimedOut(true), 8000);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    // If auth is still loading but we timed out, treat as logged out
-    const effectiveLoading = isLoading && !bootTimedOut;
-    if (effectiveLoading) return;
-
     const group = segments?.[0];
     const inAuth = group === "(auth)";
     const inTabs = group === "(tabs)";
     const inOnboarding = group === "(onboarding)";
 
-    const effectiveUser = bootTimedOut ? null : user;
-
-    if (!effectiveUser && !inAuth) {
+    // ✅ Never block the app waiting on session restore.
+    // If user is null, show auth right away.
+    if (!user && !inAuth) {
       router.replace("/(auth)/sign-up");
       return;
     }
 
-    if (effectiveUser && !(inTabs || inOnboarding)) {
+    // If we have a user, send them to tabs unless they’re already in tabs/onboarding.
+    if (user && !(inTabs || inOnboarding)) {
       router.replace("/(tabs)/home");
       return;
     }
-  }, [user, isLoading, bootTimedOut, segments, router]);
+  }, [user, segments, router]);
 
-  if (isLoading && !bootTimedOut) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 12, fontWeight: "700" }}>Loading session…</Text>
-      </View>
-    );
-  }
+  return (
+    <>
+      <Slot />
 
-  if (bootTimedOut) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 12, fontWeight: "700" }}>Starting…</Text>
-        <Text style={{ marginTop: 6, textAlign: "center" }}>
-          Session restore timed out — continuing as logged out.
-        </Text>
-      </View>
-    );
-  }
-
-  return <Slot />;
+      {/* ✅ Optional: non-blocking indicator while restoring session */}
+      {isLoading ? (
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 50,
+            alignItems: "center",
+          }}
+        >
+          <ActivityIndicator />
+        </View>
+      ) : null}
+    </>
+  );
 }
 
 function FontsGate({ children }: { children: React.ReactNode }) {
